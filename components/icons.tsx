@@ -50,17 +50,24 @@ export const ProfileIcon: React.FC<{ className?: string }> = ({ className }) => 
   </svg>
 );
 
-export const BasketIcon: React.FC<{ className?: string }> = ({ className }) => (
+export const FridgeIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="m5 9 1 9.81A2 2 0 0 0 7.96 21h8.08a2 2 0 0 0 1.96-2.19L19 9" /><path d="M16 9a4 4 0 0 0-8 0" />
+      <path d="M5 2H19C20.1046 2 21 2.89543 21 4V20C21 21.1046 20.1046 22 19 22H5C3.89543 22 3 21.1046 3 20V4C3 2.89543 3.89543 2 5 2Z" />
+      <path d="M3 10H21" />
+      <path d="M6 6V7" />
   </svg>
 );
 
-export const MagicWandIcon: React.FC<{ className?: string }> = ({ className }) => (
+export const SpatulaIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M15 4V2" /><path d="M15 10V8" /><path d="M12.5 7H17.5" /><path d="M12 22v-5" /><path d="M9 17h6" /><path d="m2 12 5 2 1.5-3L10 6 5 4 2 7Z" /><path d="M14 12V6.5" /><path d="m22 12-5-2-1.5 3L14 18l5 2 3-3Z" />
+    <path d="M6 2h12a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" />
+    <line x1="12" y1="12" x2="12" y2="22" />
+    <line x1="8" y1="5" x2="8" y2="9" />
+    <line x1="12" y1="5" x2="12" y2="9" />
+    <line x1="16" y1="5" x2="16" y2="9" />
   </svg>
 );
+
 
 export const ChatBubbleIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>

@@ -101,6 +101,7 @@ export const translations = {
     findRecipes: 'Find Recipes',
     priorityIngredientsTitle: 'Priority Ingredients',
     priorityIngredientsSubtitle: 'Select ingredients you want to use up first.',
+    loadingRecipes: 'AI chef is crafting your personalized recipes...',
     // Recipe Detail Modal
     ingredients: 'Ingredients',
     missingIngredients: 'Missing Ingredients',
@@ -307,6 +308,7 @@ export const translations = {
     findRecipes: '레시피 찾기',
     priorityIngredientsTitle: '우선 사용 재료',
     priorityIngredientsSubtitle: '먼저 사용하고 싶은 재료를 선택하세요.',
+    loadingRecipes: 'AI 셰프가 맞춤 레시피를 만들고 있어요...',
     // Recipe Detail Modal
     ingredients: '재료',
     missingIngredients: '없는 재료',

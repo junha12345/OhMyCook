@@ -10,7 +10,7 @@ import PopularRecipes from './components/PopularRecipes';
 import Onboarding from './components/Onboarding';
 import ShoppingList from './components/ShoppingList';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
-import { LogoIcon, ProfileIcon, BasketIcon, MagicWandIcon, ChatBubbleIcon, TrendingUpIcon, CameraIcon, ShoppingCartIcon, BookmarkIcon } from './components/icons';
+import { LogoIcon, ProfileIcon, FridgeIcon, SpatulaIcon, ChatBubbleIcon, TrendingUpIcon, CameraIcon, ShoppingCartIcon, BookmarkIcon } from './components/icons';
 import { INGREDIENT_DATA } from './data/ingredients';
 import Spinner from './components/Spinner';
 import SavedRecipes from './components/SavedRecipes';
@@ -208,8 +208,8 @@ const HomeScreen: React.FC<{ onNavigate: (view: View) => void, currentUser: User
   const { t } = useLanguage();
 
   const menuItems = [
-    { view: 'ingredients', icon: BasketIcon, title: t('ingredientsTitle'), subtitle: t('ingredientsSubtitle') },
-    { view: 'recommendations', icon: MagicWandIcon, title: t('recommendationsTitle'), subtitle: t('recommendationsSubtitle') },
+    { view: 'ingredients', icon: FridgeIcon, title: t('ingredientsTitle'), subtitle: t('ingredientsSubtitle') },
+    { view: 'recommendations', icon: SpatulaIcon, title: t('recommendationsTitle'), subtitle: t('recommendationsSubtitle') },
     { view: 'popular', icon: TrendingUpIcon, title: t('popularTitle'), subtitle: t('popularSubtitle') },
     { view: 'chat', icon: ChatBubbleIcon, title: t('chatTitle'), subtitle: t('chatSubtitle') },
   ];
@@ -223,7 +223,7 @@ const HomeScreen: React.FC<{ onNavigate: (view: View) => void, currentUser: User
       <div className="grid grid-cols-2 gap-4">
         {menuItems.map(item => (
           <button key={item.view} onClick={() => onNavigate(item.view as View)} className="bg-surface p-4 rounded-2xl shadow-subtle text-left hover:scale-105 transition-transform duration-200">
-            <item.icon className="w-10 h-10 p-2 bg-brand-light text-brand-primary rounded-xl mb-4" />
+            <item.icon className="w-14 h-14 p-3 bg-brand-light text-brand-primary rounded-xl mb-4" />
             <h2 className="font-bold text-text-primary">{item.title}</h2>
             <p className="text-xs text-text-secondary mt-1">{item.subtitle}</p>
           </button>

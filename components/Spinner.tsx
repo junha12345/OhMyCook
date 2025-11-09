@@ -1,7 +1,7 @@
 
 import React from 'react';
 
-const Spinner: React.FC<{ size?: 'sm' | 'md' | 'lg' }> = ({ size = 'md' }) => {
+export const Spinner: React.FC<{ size?: 'sm' | 'md' | 'lg' }> = ({ size = 'md' }) => {
   const sizeClasses = {
     sm: 'w-6 h-6 border-2',
     md: 'w-10 h-10 border-4',
@@ -16,5 +16,20 @@ const Spinner: React.FC<{ size?: 'sm' | 'md' | 'lg' }> = ({ size = 'md' }) => {
     </div>
   );
 };
+
+export const ProgressBar: React.FC<{ progress: number }> = ({ progress }) => {
+  return (
+    <div className="w-full bg-line-light rounded-full h-5 relative overflow-hidden border border-line-dark/20">
+      <div
+        className="bg-brand-primary h-full rounded-full transition-all duration-300 ease-linear"
+        style={{ width: `${progress}%` }}
+      ></div>
+      <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white mix-blend-difference px-2">
+        {Math.round(progress)}%
+      </span>
+    </div>
+  );
+};
+
 
 export default Spinner;

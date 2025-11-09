@@ -1,9 +1,9 @@
 
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Recipe, Ingredient, RecipeFilters, ShoppingListItem } from '../types';
 import RecipeCard, { RecipeDetailModal } from './RecipeCard';
-import Spinner from './Spinner';
+import { Spinner, ProgressBar } from './Spinner';
 import { useLanguage } from '../context/LanguageContext';
 import Header from './Header';
 import FilterModal from './FilterModal';
@@ -34,6 +34,39 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({ ingredien
     maxCookTime: 45,
   });
   const [priorityIngredients, setPriorityIngredients] = useState<string[]>([]);
+  const [progress, setProgress] = useState(0);
+  const intervalRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (isLoading) {
+      setProgress(0);
+      const totalDuration = 10000; // Simulate a 10-second load time to 95%
+      const intervalDuration = 100;
+      const steps = totalDuration / intervalDuration;
+      const increment = 95 / steps;
+
+      intervalRef.current = window.setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 95) {
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            return 95;
+          }
+          return prev + increment;
+        });
+      }, intervalDuration);
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+       if (progress > 0 && progress < 100) {
+        setProgress(100);
+      }
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [isLoading]);
+
 
   const togglePriorityIngredient = (name: string) => {
     setPriorityIngredients(prev =>
@@ -112,14 +145,21 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({ ingredien
           </button>
         </div>
         
-        {isLoading && <div className="py-8"><Spinner /></div>}
+        {isLoading && (
+          <div className="py-8 px-4 text-center">
+            <p className="text-text-primary font-semibold mb-3">{t('loadingRecipes')}</p>
+            <ProgressBar progress={progress} />
+          </div>
+        )}
         {error && <p className="text-red-500 text-center py-4 mt-4">{error}</p>}
         
-        <div className="space-y-4">
-          {recipes.map((recipe, index) => (
-            <RecipeCard key={index} recipe={recipe} onSelect={() => setSelectedRecipe(recipe)}/>
-          ))}
-        </div>
+        {!isLoading && progress === 100 && (
+          <div className="space-y-4">
+            {recipes.map((recipe, index) => (
+              <RecipeCard key={index} recipe={recipe} onSelect={() => setSelectedRecipe(recipe)}/>
+            ))}
+          </div>
+        )}
         
         {selectedRecipe && (
           <RecipeDetailModal 

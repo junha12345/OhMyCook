@@ -2,37 +2,67 @@
 import { UserSettings, Recipe, RecipeFilters, ChatMessage } from '../types';
 
 async function callGeminiApi(action: string, payload: any) {
-  try {
-    const response = await fetch('/api/gemini', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ action, payload }),
-    });
+  const MAX_RETRIES = 3;
+  let delay = 1000; // Start with a 1-second delay
 
-    if (!response.ok) {
-      // Read the response body as text first, to avoid "body stream already read" error.
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action, payload }),
+      });
+
+      if (response.ok) {
+        return await response.json(); // Success
+      }
+
+      // Handle non-OK responses below
       const errorText = await response.text();
+      let errorData;
       try {
-        // Try to parse the text as JSON to get a structured error message.
-        const errorData = JSON.parse(errorText);
-        throw new Error(errorData.error || `API call failed with status: ${response.status}`);
+        errorData = JSON.parse(errorText);
       } catch (e) {
-        // If parsing fails, it's not a JSON response, so use the raw text as the error.
-        // This handles cases like Vercel serverless function timeouts which return plain text/HTML.
+        // If parsing fails, it's not a JSON response (e.g., Vercel timeout page)
+        // We don't retry on these as they are likely not temporary model issues.
         throw new Error(errorText || `API call failed with status: ${response.status}`);
       }
-    }
 
-    return await response.json();
-  } catch (error) {
-    console.error(`Error in ${action}:`, error);
-    if (error instanceof Error) {
-        throw error;
+      const errorMessage = errorData.error || '';
+      // Check for the specific "overloaded" message from the Gemini API
+      const isRetryable = errorMessage.includes("overloaded") || errorMessage.includes("503");
+
+      if (isRetryable && attempt < MAX_RETRIES) {
+        console.warn(`Attempt ${attempt}: Model is overloaded. Retrying in ${delay / 1000}s...`);
+        await new Promise(res => setTimeout(res, delay));
+        delay *= 2; // Double the delay for the next attempt (exponential backoff)
+        continue; // Go to the next iteration of the loop
+      } else {
+        // If it's not a retryable error, or we've exhausted retries, throw the error.
+        throw new Error(errorMessage || `API call failed with status: ${response.status}`);
+      }
+
+    } catch (error) {
+      // This catches network errors or errors thrown from the block above
+      if (attempt < MAX_RETRIES) {
+        console.warn(`Attempt ${attempt} failed with error: ${error}. Retrying in ${delay / 1000}s...`);
+        await new Promise(res => setTimeout(res, delay));
+        delay *= 2;
+      } else {
+        // If this was the last attempt, re-throw the error to be displayed to the user.
+        console.error(`Error in ${action} after ${MAX_RETRIES} attempts:`, error);
+        if (error instanceof Error) {
+            throw error;
+        }
+        throw new Error('An unknown error occurred during the API call.');
+      }
     }
-    throw new Error('An unknown error occurred during the API call.');
   }
+  
+  // This should not be reachable if the loop logic is correct
+  throw new Error(`API call for ${action} failed after all retries.`);
 }
 
 

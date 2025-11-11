@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect } from 'react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { UserSettings, Ingredient, ShoppingListItem, Recipe, User } from './types';
@@ -128,6 +130,7 @@ const ReceiptScanner: React.FC<{ onBack: () => void, onScanComplete: (newIngredi
         {isCameraOn ? (
            <div className="w-full p-4 border bg-surface rounded-2xl shadow-subtle mb-6">
             <video ref={videoRef} className="w-full rounded-lg" playsInline/>
+            <canvas ref={canvasRef} className="hidden"></canvas>
             <button onClick={takePicture} className="w-full mt-4 bg-brand-primary text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2">
               <CameraIcon className="w-5 h-5" />
               <span>{t('takePhoto')}</span>

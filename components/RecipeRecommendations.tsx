@@ -8,6 +8,7 @@ import { useLanguage } from '../context/LanguageContext';
 import Header from './Header';
 import FilterModal from './FilterModal';
 import { getIngredientTranslation } from '../data/ingredients';
+import { cookingAnimation, platingAnimation } from './animations';
 
 interface RecipeRecommendationsProps {
   ingredients: Ingredient[];
@@ -40,7 +41,7 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({ ingredien
   useEffect(() => {
     if (isLoading) {
       setProgress(0);
-      const totalDuration = 10000; // Simulate a 10-second load time to 95%
+      const totalDuration = 24000; // Simulate a 24-second load time to 95%
       const intervalDuration = 100;
       const steps = totalDuration / intervalDuration;
       const increment = 95 / steps;
@@ -147,7 +148,16 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({ ingredien
         
         {isLoading && (
           <div className="py-8 px-4 text-center">
-            <p className="text-text-primary font-semibold mb-3">{t('loadingRecipes')}</p>
+            <p className="text-text-primary font-semibold mb-3">
+              {progress < 50 ? t('loadingRecipes') : t('loadingRecipesAlmostDone')}
+            </p>
+            <div className="my-6">
+              <img 
+                src={progress < 50 ? cookingAnimation : platingAnimation}
+                alt="Cooking animation"
+                className="w-32 h-32 mx-auto"
+              />
+            </div>
             <ProgressBar progress={progress} />
           </div>
         )}

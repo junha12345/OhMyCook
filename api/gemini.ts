@@ -46,7 +46,7 @@ const recipeSchema = {
 
 async function handleGetRecipeRecommendations(ai: GoogleGenAI, payload: { ingredients: string[], priorityIngredients: string[], filters: RecipeFilters, language: 'en' | 'ko' }): Promise<Recipe[]> {
     const { ingredients, priorityIngredients, filters, language } = payload;
-    const model = 'gemini-3-pro-preview';
+    const model = 'gemini-2.5-flash';
     const t = (key: keyof typeof translations.en) => translations[language][key];
 
     const recipeConditions = `

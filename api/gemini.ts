@@ -175,7 +175,7 @@ async function handleAnalyzeReceipt(ai: GoogleGenAI, payload: { base64Image: str
 async function handleChatWithAIChef(ai: GoogleGenAI, payload: { history: ChatMessage[], message: string, settings: UserSettings, language: 'en' | 'ko', recipeContext?: Recipe | null }): Promise<string> {
     const { history, message, settings, language, recipeContext } = payload;
     // Updated to use the Pro model for better reasoning and chat experience
-    const model = 'gemini-3-pro-preview';
+    const model = 'gemini-2.5-pro';
     const targetLanguage = language === 'ko' ? 'Korean' : 'English';
     
     let systemInstruction = `

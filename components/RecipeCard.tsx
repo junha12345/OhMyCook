@@ -69,7 +69,6 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onSelect }) => {
            <div className="flex flex-wrap gap-2">
                <Tag color={cuisineColor}>{recipe.cuisine}</Tag>
                <Tag color="green">{t('ownedIngredients', {count: recipe.ingredients.length - (recipe.missingIngredients?.length || 0)})}</Tag>
-               {recipe.isDetailsLoaded === false && <span className="text-xs text-gray-400 italic ml-auto">Click for details</span>}
            </div>
        </div>
     </div>
@@ -87,6 +86,7 @@ export const RecipeDetailModal: React.FC<{
     onStartChat: (recipe: Recipe) => void;
 }> = ({ recipe, onClose, shoppingList, onToggleShoppingListItem, isSaved, onToggleSaveRecipe, onStartChat }) => {
     const { t } = useLanguage();
+    // Default to true if the property is missing (backward compatibility), or strictly check if false.
     const isLoadingDetails = recipe.isDetailsLoaded === false;
 
     return (
@@ -106,58 +106,69 @@ export const RecipeDetailModal: React.FC<{
 
                 <p className="text-text-secondary mb-6">{recipe.description}</p>
                 
-                {isLoadingDetails ? (
-                    <div className="flex flex-col items-center justify-center py-10 space-y-4">
-                        <Spinner size="md" />
-                        <p className="text-text-secondary animate-pulse">{t('loadingRecipes')}</p>
-                    </div>
-                ) : (
-                    <div className="space-y-6">
-                        <div>
-                            <h3 className="text-lg font-bold text-text-primary mb-2 border-b pb-1">{t('ingredients')}</h3>
+                <div className="space-y-6">
+                    <div>
+                        <h3 className="text-lg font-bold text-text-primary mb-2 border-b pb-1">{t('ingredients')}</h3>
+                        {isLoadingDetails ? (
+                            <div className="flex items-center gap-2 text-text-secondary py-2">
+                                <Spinner size="sm" />
+                                <span>{t('loadingRecipes')}</span>
+                            </div>
+                        ) : (
                             <ul className="list-disc list-inside space-y-1 text-text-primary">
                                 {recipe.ingredients.map(ing => <li key={ing}>{ing}</li>)}
                             </ul>
-                            {recipe.missingIngredients && recipe.missingIngredients.length > 0 && (
-                                <div className="mt-3">
-                                    <h4 className="font-bold text-red-600">{t('missingIngredients')}</h4>
-                                    <ul className="list-disc list-inside text-red-500 space-y-1">
-                                    {recipe.missingIngredients.map(ing => {
-                                        const isAdded = shoppingList.some(item => item.name === ing);
-                                        return (
-                                            <li key={ing} className="flex justify-between items-center py-1">
-                                                <span>{ing}</span>
-                                                <button 
-                                                    onClick={() => onToggleShoppingListItem(ing)}
-                                                    className={`text-xs font-bold px-3 py-1 rounded-full ${isAdded ? 'bg-green-600 text-white' : 'bg-brand-primary text-white'}`}
-                                                >
-                                                    {isAdded ? t('addedToShoppingList') : t('addToShoppingList')}
-                                                </button>
-                                            </li>
-                                        );
-                                    })}
-                                    </ul>
-                                </div>
-                            )}
-                             {recipe.substitutions && recipe.substitutions.length > 0 && (
-                                <div className="mt-3 bg-yellow-50 p-3 rounded-lg border border-yellow-100">
-                                    <h4 className="font-bold text-yellow-700 mb-1">{t('substitutable')}</h4>
-                                    <ul className="text-sm text-yellow-800 space-y-1">
-                                        {recipe.substitutions.map((sub, idx) => (
-                                            <li key={idx}><span className="font-semibold">{sub.missing}</span> → {sub.substitute}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-bold text-text-primary mb-2 border-b pb-1">{t('instructions')}</h3>
+                        )}
+                        
+                        {recipe.missingIngredients && recipe.missingIngredients.length > 0 && (
+                            <div className="mt-3">
+                                <h4 className="font-bold text-red-600">{t('missingIngredients')}</h4>
+                                <ul className="list-disc list-inside text-red-500 space-y-1">
+                                {recipe.missingIngredients.map(ing => {
+                                    const isAdded = shoppingList.some(item => item.name === ing);
+                                    return (
+                                        <li key={ing} className="flex justify-between items-center py-1">
+                                            <span>{ing}</span>
+                                            <button 
+                                                onClick={() => onToggleShoppingListItem(ing)}
+                                                className={`text-xs font-bold px-3 py-1 rounded-full ${isAdded ? 'bg-green-600 text-white' : 'bg-brand-primary text-white'}`}
+                                            >
+                                                {isAdded ? t('addedToShoppingList') : t('addToShoppingList')}
+                                            </button>
+                                        </li>
+                                    );
+                                })}
+                                </ul>
+                            </div>
+                        )}
+                        
+                        {/* Only show substitutions if they exist and we are not loading */}
+                        {!isLoadingDetails && recipe.substitutions && recipe.substitutions.length > 0 && (
+                            <div className="mt-3 bg-yellow-50 p-3 rounded-lg border border-yellow-100">
+                                <h4 className="font-bold text-yellow-700 mb-1">{t('substitutable')}</h4>
+                                <ul className="text-sm text-yellow-800 space-y-1">
+                                    {recipe.substitutions.map((sub, idx) => (
+                                        <li key={idx}><span className="font-semibold">{sub.missing}</span> → {sub.substitute}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                    </div>
+                    
+                    <div>
+                        <h3 className="text-lg font-bold text-text-primary mb-2 border-b pb-1">{t('instructions')}</h3>
+                        {isLoadingDetails ? (
+                            <div className="flex flex-col items-center justify-center py-6 space-y-3">
+                                <Spinner size="md" />
+                                <p className="text-sm text-text-secondary animate-pulse">{t('loadingRecipesAlmostDone')}</p>
+                            </div>
+                        ) : (
                             <ol className="list-decimal list-inside space-y-3 text-text-primary">
                                 {recipe.instructions.map((step, index) => <li key={index}>{step}</li>)}
                             </ol>
-                        </div>
+                        )}
                     </div>
-                )}
+                </div>
 
                 <button 
                     onClick={() => onStartChat(recipe)}

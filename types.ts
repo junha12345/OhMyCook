@@ -18,12 +18,12 @@ export interface Recipe {
   spiciness: number;
   calories: number;
   servings: number;
-  ingredients: string[];
+  ingredients: string[]; // Initially just names, later strings with quantities
   missingIngredients?: string[];
   substitutions?: { missing: string; substitute: string; }[];
-  instructions: string[];
+  instructions: string[]; // Empty initially
   cuisine: string;
-  isDetailsLoaded?: boolean;
+  isDetailsLoaded?: boolean; // Flag to check if details are fetched
 }
 
 export interface ChatMessage {

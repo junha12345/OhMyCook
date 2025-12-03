@@ -39,7 +39,7 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({ ingredien
   useEffect(() => {
     if (isLoading) {
       setProgress(0);
-      const totalDuration = 10000; // Reduced duration since we only fetch summaries
+      const totalDuration = 5000; // Faster duration since we only fetch summaries
       const intervalDuration = 100;
       const steps = totalDuration / intervalDuration;
       const increment = 95 / steps;

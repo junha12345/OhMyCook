@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Recipe, Ingredient, RecipeFilters, ShoppingListItem } from '../types';
 import RecipeCard, { RecipeDetailModal } from './RecipeCard';
@@ -40,7 +39,7 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({ ingredien
   useEffect(() => {
     if (isLoading) {
       setProgress(0);
-      const totalDuration = 24000; // Simulate a 24-second load time to 95%
+      const totalDuration = 10000; // Reduced duration since we only fetch summaries
       const intervalDuration = 100;
       const steps = totalDuration / intervalDuration;
       const increment = 95 / steps;
@@ -96,6 +95,34 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({ ingredien
       setError(err instanceof Error ? err.message : 'An unknown error occurred.');
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  const handleRecipeSelect = async (recipe: Recipe) => {
+    setSelectedRecipe(recipe);
+    
+    // Lazy load details if not already loaded
+    if (!recipe.isDetailsLoaded) {
+       try {
+          const { getRecipeDetails } = await import('../services/geminiService');
+          const ingredientNames = ingredients.map(ing => ing.name);
+          const details = await getRecipeDetails(recipe.recipeName, ingredientNames, language);
+          
+          const updatedRecipe = {
+              ...recipe,
+              ...details,
+              isDetailsLoaded: true
+          };
+
+          // Update the selected recipe with details
+          setSelectedRecipe(updatedRecipe);
+          
+          // Also update the recipe in the main list so we don't fetch again
+          setRecipes(prev => prev.map(r => r.recipeName === recipe.recipeName ? updatedRecipe : r));
+       } catch (error) {
+           console.error("Failed to fetch recipe details", error);
+           // Optionally handle error in modal (e.g. show "Failed to load details")
+       }
     }
   };
   
@@ -161,7 +188,7 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({ ingredien
         {!isLoading && progress === 100 && (
           <div className="space-y-4">
             {recipes.map((recipe, index) => (
-              <RecipeCard key={index} recipe={recipe} onSelect={() => setSelectedRecipe(recipe)}/>
+              <RecipeCard key={index} recipe={recipe} onSelect={() => handleRecipeSelect(recipe)}/>
             ))}
           </div>
         )}

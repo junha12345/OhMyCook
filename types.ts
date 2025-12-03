@@ -1,3 +1,4 @@
+
 export interface UserSettings {
   cookingLevel: 'Beginner' | 'Intermediate' | 'Advanced';
   allergies: string[];
@@ -22,6 +23,7 @@ export interface Recipe {
   substitutions?: { missing: string; substitute: string; }[];
   instructions: string[];
   cuisine: string;
+  isDetailsLoaded?: boolean;
 }
 
 export interface ChatMessage {

@@ -72,6 +72,12 @@ export async function getRecipeRecommendations(ingredients: string[], priorityIn
   return data.result;
 }
 
+export async function getRecipeDetails(recipeName: string, ingredients: string[], language: 'en' | 'ko'): Promise<Partial<Recipe>> {
+  const payload = { recipeName, ingredients, language };
+  const data = await callGeminiApi('getRecipeDetails', payload);
+  return data.result;
+}
+
 export async function analyzeReceipt(base64Image: string): Promise<string[]> {
   const payload = { base64Image };
   const data = await callGeminiApi('analyzeReceipt', payload);

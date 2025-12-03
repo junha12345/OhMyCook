@@ -4,6 +4,7 @@ import { Recipe, ShoppingListItem } from '../types';
 import { ClockIcon, FireIcon, XIcon, BookmarkIcon, ChatBubbleIcon } from './icons';
 import { useLanguage } from '../context/LanguageContext';
 import ImageWithFallback from './ImageWithFallback';
+import Spinner from './Spinner';
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -44,11 +45,11 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onSelect }) => {
 
 
   return (
-    <div onClick={onSelect} className="bg-surface rounded-2xl shadow-subtle overflow-hidden flex cursor-pointer">
+    <div onClick={onSelect} className="bg-surface rounded-2xl shadow-subtle overflow-hidden flex cursor-pointer hover:shadow-lg transition-shadow">
        <ImageWithFallback src={imageUrl} alt={recipe.recipeName} className="w-28 h-auto object-cover" />
-       <div className="p-4 flex flex-col justify-between">
+       <div className="p-4 flex flex-col justify-between flex-grow">
            <div>
-            <h4 className="font-bold text-text-primary mb-2">{recipe.recipeName}</h4>
+            <h4 className="font-bold text-text-primary mb-2 line-clamp-1">{recipe.recipeName}</h4>
             <div className="flex items-center gap-4 text-xs text-text-secondary mb-3">
                 <div className="flex items-center gap-1">
                     <ClockIcon className="w-4 h-4" />
@@ -68,7 +69,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onSelect }) => {
            <div className="flex flex-wrap gap-2">
                <Tag color={cuisineColor}>{recipe.cuisine}</Tag>
                <Tag color="green">{t('ownedIngredients', {count: recipe.ingredients.length - (recipe.missingIngredients?.length || 0)})}</Tag>
-               {recipe.substitutions && recipe.substitutions.length > 0 && <Tag color="yellow">{t('substitutable')}</Tag>}
+               {recipe.isDetailsLoaded === false && <span className="text-xs text-gray-400 italic ml-auto">Click for details</span>}
            </div>
        </div>
     </div>
@@ -86,8 +87,10 @@ export const RecipeDetailModal: React.FC<{
     onStartChat: (recipe: Recipe) => void;
 }> = ({ recipe, onClose, shoppingList, onToggleShoppingListItem, isSaved, onToggleSaveRecipe, onStartChat }) => {
     const { t } = useLanguage();
+    const isLoadingDetails = recipe.isDetailsLoaded === false;
+
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4 font-sans">
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4 font-sans animate-fade-in">
             <div className="bg-surface rounded-2xl shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 relative">
                 <div className="flex justify-between items-start">
                     <h2 className="text-2xl font-bold text-text-primary mb-4 pr-16">{recipe.recipeName}</h2>
@@ -103,45 +106,62 @@ export const RecipeDetailModal: React.FC<{
 
                 <p className="text-text-secondary mb-6">{recipe.description}</p>
                 
-                <div className="space-y-6">
-                    <div>
-                        <h3 className="text-lg font-bold text-text-primary mb-2 border-b pb-1">{t('ingredients')}</h3>
-                        <ul className="list-disc list-inside space-y-1 text-text-primary">
-                            {recipe.ingredients.map(ing => <li key={ing}>{ing}</li>)}
-                        </ul>
-                        {recipe.missingIngredients && recipe.missingIngredients.length > 0 && (
-                            <div className="mt-3">
-                                <h4 className="font-bold text-red-600">{t('missingIngredients')}</h4>
-                                <ul className="list-disc list-inside text-red-500 space-y-1">
-                                  {recipe.missingIngredients.map(ing => {
-                                      const isAdded = shoppingList.some(item => item.name === ing);
-                                      return (
-                                          <li key={ing} className="flex justify-between items-center py-1">
-                                              <span>{ing}</span>
-                                              <button 
-                                                  onClick={() => onToggleShoppingListItem(ing)}
-                                                  className={`text-xs font-bold px-3 py-1 rounded-full ${isAdded ? 'bg-green-600 text-white' : 'bg-brand-primary text-white'}`}
-                                              >
-                                                  {isAdded ? t('addedToShoppingList') : t('addToShoppingList')}
-                                              </button>
-                                          </li>
-                                      );
-                                  })}
-                                </ul>
-                            </div>
-                        )}
+                {isLoadingDetails ? (
+                    <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                        <Spinner size="md" />
+                        <p className="text-text-secondary animate-pulse">{t('loadingRecipes')}</p>
                     </div>
-                    <div>
-                        <h3 className="text-lg font-bold text-text-primary mb-2 border-b pb-1">{t('instructions')}</h3>
-                        <ol className="list-decimal list-inside space-y-3 text-text-primary">
-                            {recipe.instructions.map((step, index) => <li key={index}>{step}</li>)}
-                        </ol>
+                ) : (
+                    <div className="space-y-6">
+                        <div>
+                            <h3 className="text-lg font-bold text-text-primary mb-2 border-b pb-1">{t('ingredients')}</h3>
+                            <ul className="list-disc list-inside space-y-1 text-text-primary">
+                                {recipe.ingredients.map(ing => <li key={ing}>{ing}</li>)}
+                            </ul>
+                            {recipe.missingIngredients && recipe.missingIngredients.length > 0 && (
+                                <div className="mt-3">
+                                    <h4 className="font-bold text-red-600">{t('missingIngredients')}</h4>
+                                    <ul className="list-disc list-inside text-red-500 space-y-1">
+                                    {recipe.missingIngredients.map(ing => {
+                                        const isAdded = shoppingList.some(item => item.name === ing);
+                                        return (
+                                            <li key={ing} className="flex justify-between items-center py-1">
+                                                <span>{ing}</span>
+                                                <button 
+                                                    onClick={() => onToggleShoppingListItem(ing)}
+                                                    className={`text-xs font-bold px-3 py-1 rounded-full ${isAdded ? 'bg-green-600 text-white' : 'bg-brand-primary text-white'}`}
+                                                >
+                                                    {isAdded ? t('addedToShoppingList') : t('addToShoppingList')}
+                                                </button>
+                                            </li>
+                                        );
+                                    })}
+                                    </ul>
+                                </div>
+                            )}
+                             {recipe.substitutions && recipe.substitutions.length > 0 && (
+                                <div className="mt-3 bg-yellow-50 p-3 rounded-lg border border-yellow-100">
+                                    <h4 className="font-bold text-yellow-700 mb-1">{t('substitutable')}</h4>
+                                    <ul className="text-sm text-yellow-800 space-y-1">
+                                        {recipe.substitutions.map((sub, idx) => (
+                                            <li key={idx}><span className="font-semibold">{sub.missing}</span> → {sub.substitute}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-text-primary mb-2 border-b pb-1">{t('instructions')}</h3>
+                            <ol className="list-decimal list-inside space-y-3 text-text-primary">
+                                {recipe.instructions.map((step, index) => <li key={index}>{step}</li>)}
+                            </ol>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 <button 
                     onClick={() => onStartChat(recipe)}
-                    className="absolute bottom-6 right-6 bg-brand-primary text-white p-3 rounded-full shadow-lg hover:scale-110 transition-transform"
+                    className="absolute bottom-6 right-6 bg-brand-primary text-white p-3 rounded-full shadow-lg hover:scale-110 transition-transform z-10"
                     title={t('askAIChef')}
                 >
                     <ChatBubbleIcon className="w-6 h-6" />

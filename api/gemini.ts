@@ -9,38 +9,48 @@ export const config = {
   runtime: 'edge',
 };
 
-const recipeSchema = {
+// Stage 1: Fast Overview Schema
+const recipeOverviewSchema = {
   type: Type.ARRAY,
   items: {
     type: Type.OBJECT,
     properties: {
-      recipeName: { type: Type.STRING, description: 'Creative name of the recipe, in the requested language (e.g., "Kimchi Jjigae" for English, "김치찌개" for Korean).' },
-      englishRecipeName: { type: Type.STRING, description: 'The English name of the recipe (e.g., "Kimchi Stew"). This is mandatory and used for image searches. Do not include parentheses.' },
+      recipeName: { type: Type.STRING, description: 'Creative name of the recipe, in the requested language.' },
+      englishRecipeName: { type: Type.STRING, description: 'The English name of the recipe. Mandatory.' },
       description: { type: Type.STRING, description: 'A short, enticing description.' },
-      cuisine: { type: Type.STRING, description: 'The type of cuisine, e.g., Korean, Western, Chinese, Japanese.' },
+      cuisine: { type: Type.STRING, description: 'The type of cuisine.' },
       cookTime: { type: Type.INTEGER, description: 'Estimated cooking time in minutes.' },
       difficulty: { type: Type.STRING, enum: ['Easy', 'Medium', 'Hard'] },
-      spiciness: { type: Type.INTEGER, description: 'Spiciness level from 1 (not spicy) to 5 (very spicy).' },
+      spiciness: { type: Type.INTEGER, description: 'Spiciness level from 1 to 5.' },
       calories: { type: Type.INTEGER, description: 'Estimated calories per serving.' },
-      servings: { type: Type.INTEGER, description: 'Number of servings the recipe makes.' },
-      ingredients: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'List of all ingredients needed.' },
-      missingIngredients: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'Ingredients the user is missing.' },
-      substitutions: {
-        type: Type.ARRAY,
-        description: 'List of objects, where each object represents a missing ingredient and its suggested substitute.',
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            missing: { type: Type.STRING, description: 'The ingredient the user is missing.' },
-            substitute: { type: Type.STRING, description: 'A suggested substitute for the missing ingredient.' }
-          },
-          required: ['missing', 'substitute']
-        }
-      },
-      instructions: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'Step-by-step cooking instructions.' },
+      servings: { type: Type.INTEGER, description: 'Number of servings.' },
+      ingredients: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'List of main ingredient NAMES only (no quantities yet).' },
+      missingIngredients: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'Names of ingredients the user is missing.' },
     },
-    required: ['recipeName', 'englishRecipeName', 'description', 'cuisine', 'cookTime', 'difficulty', 'spiciness', 'calories', 'servings', 'ingredients', 'instructions']
+    required: ['recipeName', 'englishRecipeName', 'description', 'cuisine', 'cookTime', 'difficulty', 'spiciness', 'calories', 'servings', 'ingredients']
   }
+};
+
+// Stage 2: Detailed Instructions Schema
+const recipeDetailSchema = {
+  type: Type.OBJECT,
+  properties: {
+    ingredients: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'Detailed list of ingredients with specific QUANTITIES (e.g., "200g Pork Belly").' },
+    substitutions: {
+      type: Type.ARRAY,
+      description: 'List of substitutions for missing ingredients.',
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          missing: { type: Type.STRING, description: 'The ingredient the user is missing.' },
+          substitute: { type: Type.STRING, description: 'A suggested substitute.' }
+        },
+        required: ['missing', 'substitute']
+      }
+    },
+    instructions: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'Detailed step-by-step cooking instructions.' },
+  },
+  required: ['ingredients', 'instructions']
 };
 
 
@@ -66,36 +76,36 @@ async function handleGetRecipeRecommendations(ai: GoogleGenAI, payload: { ingred
       : priorityIngredients;
 
     const priorityPromptPart = {
-      en: priorityIngredients.length > 0 ? `\nPRIORITY: You MUST create recipes that prominently feature as many of the following priority ingredients as possible: ${priorityIngredients.join(', ')}. These are ingredients the user wants to use up.` : '',
-      ko: priorityIngredients.length > 0 ? `\n우선순위: 다음 우선 재료들을 최대한 많이 사용하는 레시피를 만들어야 합니다: ${translatedPriorityIngredients.join(', ')}. 사용자가 먼저 소진하고 싶어하는 재료들입니다.` : ''
+      en: priorityIngredients.length > 0 ? `\nPRIORITY: You MUST create recipes that prominently feature as many of the following priority ingredients as possible: ${priorityIngredients.join(', ')}.` : '',
+      ko: priorityIngredients.length > 0 ? `\n우선순위: 다음 우선 재료들을 최대한 많이 사용하는 레시피를 만들어야 합니다: ${translatedPriorityIngredients.join(', ')}.` : ''
     };
 
     const prompts = {
       en: `
         You are an expert chef creating recipes for the "OhMyCook" app.
         I have the following ingredients: ${ingredients.join(', ')}.
-        Please recommend 3 diverse and delicious recipes I can make in English that strictly match these conditions:
+        Please recommend 3 diverse and delicious recipes matching these conditions:
         ${recipeConditions}
         ${priorityPromptPart.en}
         
-        CRITICAL: You must generate a complete response in under 25 seconds to avoid a server timeout.
-
-        IMPORTANT RULE: Base your recommendations on the ingredients I have. For any recipe that requires ingredients I don't have, you MUST provide a common, sensible substitute in the 'substitutions' field. If you cannot find a suitable substitute for a missing ingredient, you MUST NOT recommend that recipe. Your primary goal is to provide actionable recipes I can cook by acquiring just a few common substitutes.
-        
-        For each recipe, provide all the detailed information as per the schema. Make sure to list all ingredients I am missing in the 'missingIngredients' field.
+        **IMPORTANT: This is the OVERVIEW stage.**
+        - Provide the recipe name, description, and metadata.
+        - For 'ingredients', just list the NAMES of the ingredients used (e.g. "Onion", "Pork"). Do not include quantities yet.
+        - Do not include 'instructions' or 'substitutions' yet.
+        - If I am missing main ingredients, list their names in 'missingIngredients'.
       `,
       ko: `
         당신은 "OhMyCook" 앱을 위한 전문 셰프입니다.
         제가 가진 재료는 다음과 같습니다: ${translatedIngredients.join(', ')}.
-        다음 조건에 정확히 맞는 다양하고 맛있는 한국어 레시피 3가지를 추천해주세요:
+        다음 조건에 맞는 3가지 레시피를 추천해주세요:
         ${recipeConditions}
         ${priorityPromptPart.ko}
         
-        매우 중요: 서버 시간 초과를 피하기 위해 25초 이내에 완전한 응답을 생성해야 합니다.
-
-        중요 규칙: 제가 가진 재료를 기반으로 레시피를 추천해주세요. 만약 레시피에 제가 가지지 않은 재료가 필요하다면, 반드시 'substitutions' 필드에 일반적이고 합리적인 대체 재료를 제안해야 합니다. 만약 없는 재료에 대한 적절한 대체재를 찾을 수 없다면, 그 레시피는 절대 추천해서는 안 됩니다. 당신의 최우선 목표는 제가 몇 가지 일반적인 대체 재료만 구하면 바로 요리할 수 있는 실행 가능한 레시피를 제공하는 것입니다.
-
-        각 레시피에 대해, 스키마에 따라 모든 자세한 정보를 제공해주세요. 제가 가지고 있지 않은 모든 재료는 'missingIngredients' 필드에 반드시 기입해주세요.
+        **중요: 이것은 '개요' 단계입니다.**
+        - 레시피 이름, 설명, 기본 정보만 제공하세요.
+        - 'ingredients'에는 수량 없이 사용되는 재료의 '이름'만 나열하세요 (예: "양파", "돼지고기").
+        - 'instructions'(조리법)이나 'substitutions'(대체재)는 아직 포함하지 마세요.
+        - 없는 재료는 'missingIngredients'에 이름만 적어주세요.
       `,
     }
 
@@ -104,11 +114,62 @@ async function handleGetRecipeRecommendations(ai: GoogleGenAI, payload: { ingred
         contents: prompts[language],
         config: {
           responseMimeType: "application/json",
-          responseSchema: recipeSchema,
+          responseSchema: recipeOverviewSchema,
           temperature: 0.7,
         }
     });
       
+    const jsonText = response.text.trim();
+    const recipes = JSON.parse(jsonText);
+    
+    // Mark as details NOT loaded
+    return recipes.map((r: any) => ({
+      ...r,
+      instructions: [],
+      substitutions: [],
+      isDetailsLoaded: false
+    }));
+}
+
+async function handleGetRecipeDetails(ai: GoogleGenAI, payload: { recipeName: string, ingredients: string[], language: 'en' | 'ko' }): Promise<Partial<Recipe>> {
+    const { recipeName, ingredients, language } = payload;
+    const model = 'gemini-2.5-flash';
+    
+    const translatedIngredients = language === 'ko'
+      ? ingredients.map(name => getIngredientTranslation(name, 'ko'))
+      : ingredients;
+
+    const prompts = {
+        en: `
+          I have selected the recipe: "${recipeName}".
+          My available ingredients are: ${ingredients.join(', ')}.
+          
+          Please provide the DETAILED info for this recipe:
+          1. 'ingredients': Full list with specific QUANTITIES (e.g., "1/2 onion, chopped", "200g Pork").
+          2. 'instructions': Step-by-step detailed cooking guide.
+          3. 'substitutions': If I am missing any required ingredients based on my list, suggest specific substitutions here.
+        `,
+        ko: `
+          제가 선택한 레시피는 "${recipeName}"입니다.
+          제가 가진 재료는: ${translatedIngredients.join(', ')}.
+          
+          이 레시피에 대한 '상세 정보'를 제공해주세요:
+          1. 'ingredients': 정확한 계량/수량이 포함된 상세 재료 목록 (예: "양파 1/2개", "돼지고기 200g").
+          2. 'instructions': 단계별 상세 조리 방법.
+          3. 'substitutions': 제 재료 목록에 없는 필수 재료가 있다면, 여기서 구체적인 대체재를 제안해주세요.
+        `
+    };
+
+    const response: GenerateContentResponse = await ai.models.generateContent({
+        model: model,
+        contents: prompts[language],
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: recipeDetailSchema,
+          temperature: 0.5,
+        }
+    });
+
     const jsonText = response.text.trim();
     return JSON.parse(jsonText);
 }
@@ -202,6 +263,9 @@ export default async function handler(req: Request) {
     switch (action) {
       case 'getRecipeRecommendations':
         result = await handleGetRecipeRecommendations(ai, payload);
+        break;
+      case 'getRecipeDetails':
+        result = await handleGetRecipeDetails(ai, payload);
         break;
       case 'analyzeReceipt':
         result = await handleAnalyzeReceipt(ai, payload);

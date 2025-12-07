@@ -1,53 +1,55 @@
-# **Unsplash Query Strategy**
+# **Google Image Search Implementation Plan**
 
 ## **Goal**
 
-To retrieve relevant images from the Unsplash API for LLM-generated recipes.
+To retrieve highly relevant and specific images for LLM-generated recipes using the Google Custom Search API.
 
-## **Research Findings**
+## **Strategy**
 
-Testing with recipe "Zesty Lime Chicken and Asparagus Stir-fry":
+### **1. LLM-Driven Query Optimization**
 
-- **Query "Zesty Lime Chicken and Asparagus Stir-fry"**: Resulted in generic asparagus images, poor relevance.
-- **Query "Chicken Asparagus Stir-fry"**: Resulted in highly relevant images.
+Request the LLM (Gemini) to generate a specific `imageSearchQuery` field in the recipe JSON response, optimized for Google Image Search.
 
-**Conclusion**: Specific adjectives (Zesty, Lime) and long phrases dilute the search relevance. Focusing on core ingredients and cooking method is best.
+- **Objective**: Create a concise, keyword-focused query (2-4 words) that captures the visual essence of the dish.
+- **Format**: Core Ingredient + Dish Type (e.g., "Kimchi Fried Rice", "Garlic Butter Steak").
+- **Schema Description**: 
+    > "A concise, optimal search query for finding a relevant image. Focus on main ingredients and dish type. Avoid subjective adjectives (e.g., 'zesty', 'delicious') and abstract terms."
 
-## **Proposed Strategy**
+### **2. Google Custom Search JSON API**
 
-### **1. LLM-Driven Query (Best)**
+Use the Google Custom Search JSON API to fetch the first image result for the generated query.
 
-Request the LLM to generate a specific `imageSearchQuery` field in the JSON response.
+- **API Endpoint**: `https://www.googleapis.com/customsearch/v1`
+- **Parameters**:
+    - `q`: `imageSearchQuery` from LLM.
+    - `searchType`: `image`
+    - `num`: `1` (Fetch only the top result).
+    - `safe`: `off` (Adjustable based on preference).
+    - `cx`: Search Engine ID (Pre-configured in Google Cloud Console).
+    - `key`: API Key.
 
-- **Pros**: The LLM understands the "essence" of the dish better than any regex.
-- **Example**:
-    
-    ```
-    {
-      "recipeName": "Zesty Lime Chicken and Asparagus Stir-fry",
-      "imageSearchQuery": "chicken asparagus stir fry"
-    }
-    
-    ```
-    
+## **Implementation Steps**
 
-### **2. Fallback Logic (Heuristic)**
+### **Step 1: Environment Configuration**
+Add the necessary credentials to the `.env` file:
+- `GOOGLE_SEARCH_API_KEY`: API Key from Google Cloud Console.
+- `GOOGLE_SEARCH_CX`: Programmable Search Engine ID.
 
-If the `imageSearchQuery` is missing, use a cleaner function:
+### **Step 2: Backend / LLM Prompt Update**
+- Modify the `recipeOverviewSchema` in `api/gemini.ts` (or equivalent) to include the `imageSearchQuery` field.
+- Ensure the field description provides clear instructions to the LLM to generate objective, noun-focused keywords.
 
-1. **Stop Words**: Remove common subjective adjectives (Zesty, Delicious, Homemade, Easy).
-2. **Length Cap**: If the name is too long (> 4 words), try to extract capitalized nouns or fallback to `cuisine` + "dish".
-3. **English Name**: Always use `englishRecipeName` if available.
+### **Step 3: Service Layer**
+- Create a utility function (e.g., `fetchRecipeImage(query: string)`) to handle the API request.
+- Parse the JSON response and extract the `link` from the first item in the `items` array.
+- Handle potential errors (quota exceeded, network issues) gracefully.
 
-## **Proposed Changes**
+### **Step 4: Frontend Integration**
+- Use the returned image URL in the recipe display component.
+- **IMPORTANT**: Implement a `ImageWithFallback` component to handle broken links or quota errors by showing a default placeholder or category-based icon.
 
-(Code not to be implemented yet, just planned)
-
-### **Backend / LLM Prompt**
-
-- Update the prompt in `pages/api/generate-recipe.ts` (or equivalent) to include `imageSearchQuery` in the output schema.
-
-### **Frontend**
-
-- Create a helper `getUnsplashQuery(recipe: Recipe): string`.
-- Use this helper when calling the Unsplash API.
+## **API Limits & Cost Management**
+- **Free Tier**: 100 queries per day.
+- **Paid Tier**: $5 per 1,000 queries.
+- **Optimization**:
+    - Consider implementing caching (local or server-side) for frequently requested recipes to reduce API usage.

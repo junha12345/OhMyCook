@@ -3,7 +3,7 @@ import React from 'react';
 // General
 export const LogoIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg viewBox="0 0 512 512" className={className} xmlns="http://www.w3.org/2000/svg">
-    <rect width="512" height="512" fill="#F26B3A" />
+    <rect width="0" height="0" fill="#F26B3A" />
     <g transform="translate(-128, -138) scale(1.5)">
       <g transform="translate(0, 76)">
         <rect x="236" y="100" width="40" height="15" rx="5" fill="#FFFFFF" />

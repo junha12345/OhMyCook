@@ -24,8 +24,12 @@ const recipeOverviewSchema = {
       servings: { type: Type.INTEGER, description: 'Number of servings.' },
       ingredients: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'List of main ingredient NAMES only (e.g. "Onion"). Do not include quantities yet. In the target language.' },
       missingIngredients: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'Names of ingredients the user is missing. In the target language.' },
+      imageSearchQuery: {
+        type: Type.STRING,
+        description: "A concise, optimal search query for finding a relevant image. Focus on main ingredients and dish type. Avoid subjective adjectives (e.g., 'zesty', 'delicious') and abstract terms."
+      },
     },
-    required: ['recipeName', 'englishRecipeName', 'description', 'cuisine', 'cookTime', 'difficulty', 'spiciness', 'calories', 'servings', 'ingredients']
+    required: ['recipeName', 'englishRecipeName', 'imageSearchQuery', 'description', 'cuisine', 'cookTime', 'difficulty', 'spiciness', 'calories', 'servings', 'ingredients']
   }
 };
 
@@ -52,15 +56,43 @@ const recipeDetailSchema = {
 };
 
 
+async function searchGoogleImage(query: string): Promise<string | null> {
+  const apiKey = process.env.API_KEY;
+  const cx = process.env.GOOGLE_SEARCH_CX;
+
+  if (!apiKey || !cx) {
+    console.warn("Missing Google Search API Key or CX");
+    return null;
+  }
+
+  const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${encodeURIComponent(query)}&searchType=image&num=1&safe=off`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error(`Google Search failed: ${response.status} ${response.statusText}`);
+      return null;
+    }
+    const data = await response.json();
+    if (data.items && data.items.length > 0) {
+      return data.items[0].link;
+    }
+    return null;
+  } catch (error) {
+    console.error("Google Search Error:", error);
+    return null;
+  }
+}
+
 async function handleGetRecipeRecommendations(ai: GoogleGenAI, payload: { ingredients: string[], priorityIngredients: string[], filters: RecipeFilters, language: 'en' | 'ko' }): Promise<Recipe[]> {
-    const { ingredients, priorityIngredients, filters, language } = payload;
-    const model = 'gemini-2.5-flash';
-    
-    // Construct the prompt in English for better model performance
-    const targetLanguage = language === 'ko' ? 'Korean' : 'English';
-    const cuisineFilter = filters.cuisine === 'any' ? 'Any' : filters.cuisine;
-    
-    const prompt = `
+  const { ingredients, priorityIngredients, filters, language } = payload;
+  const model = 'gemini-2.5-flash';
+
+  // Construct the prompt in English for better model performance
+  const targetLanguage = language === 'ko' ? 'Korean' : 'English';
+  const cuisineFilter = filters.cuisine === 'any' ? 'Any' : filters.cuisine;
+
+  const prompt = `
       You are an expert chef creating recipes for the "OhMyCook" app.
       
       CONTEXT:
@@ -79,40 +111,55 @@ async function handleGetRecipeRecommendations(ai: GoogleGenAI, payload: { ingred
       
       IMPORTANT OUTPUT INSTRUCTIONS:
       1. **Language**: Return all user-facing text (name, description, ingredients list) in **${targetLanguage}**.
-      2. **Overview Only**: This is the first stage. 
+      2. **Search Query**: For 'imageSearchQuery', generate a keyword-focused, English string optimized for Image search based on Recipe Name (e.g. "kimchi fried rice").
+      3. **Overview Only**: This is the first stage. 
          - For 'ingredients', list ONLY the names (e.g., "Onion", "Pork"). DO NOT include quantities.
          - Do NOT include 'instructions' or 'substitutions' yet.
          - If main ingredients are missing from the user's list, add them to 'missingIngredients'.
     `;
 
-    const response: GenerateContentResponse = await ai.models.generateContent({
-        model: model,
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: recipeOverviewSchema,
-          temperature: 0.7,
-        }
-    });
-      
-    const jsonText = response.text.trim();
-    const recipes = JSON.parse(jsonText);
-    
-    // Mark as details NOT loaded
-    return recipes.map((r: any) => ({
+  const response: GenerateContentResponse = await ai.models.generateContent({
+    model: model,
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: recipeOverviewSchema,
+      temperature: 0.7,
+    }
+  });
+
+  const jsonText = response.text.trim();
+  const recipes = JSON.parse(jsonText);
+
+  // Fetch images in parallel
+  const recipesWithImages = await Promise.all(recipes.map(async (r: any) => {
+    let imageUrl: string | null = null;
+    if (r.imageSearchQuery) {
+      imageUrl = await searchGoogleImage(r.imageSearchQuery);
+    }
+    // Try recipe name if query fails or not present (fallback)
+    if (!imageUrl && r.englishRecipeName) {
+      imageUrl = await searchGoogleImage(r.englishRecipeName);
+    }
+
+    return {
       ...r,
+      imageUrl,
       instructions: [],
       substitutions: [],
       isDetailsLoaded: false
-    }));
+    };
+  }));
+
+  return recipesWithImages;
 }
 
 async function handleGetRecipeDetails(ai: GoogleGenAI, payload: { recipeName: string, ingredients: string[], language: 'en' | 'ko' }): Promise<Partial<Recipe>> {
-    const { recipeName, ingredients, language } = payload;
-    const model = 'gemini-2.5-flash';
-    const targetLanguage = language === 'ko' ? 'Korean' : 'English';
+  const { recipeName, ingredients, language } = payload;
+  const model = 'gemini-2.5-flash';
+  const targetLanguage = language === 'ko' ? 'Korean' : 'English';
 
-    const prompt = `
+  const prompt = `
       You are an expert chef.
       
       CONTEXT:
@@ -129,56 +176,56 @@ async function handleGetRecipeDetails(ai: GoogleGenAI, payload: { recipeName: st
       4. **Substitutions**: If the user is missing any required ingredients based on their list, suggest specific substitutions.
     `;
 
-    const response: GenerateContentResponse = await ai.models.generateContent({
-        model: model,
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: recipeDetailSchema,
-          temperature: 0.5,
-        }
-    });
+  const response: GenerateContentResponse = await ai.models.generateContent({
+    model: model,
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: recipeDetailSchema,
+      temperature: 0.5,
+    }
+  });
 
-    const jsonText = response.text.trim();
-    return JSON.parse(jsonText);
+  const jsonText = response.text.trim();
+  return JSON.parse(jsonText);
 }
 
 async function handleAnalyzeReceipt(ai: GoogleGenAI, payload: { base64Image: string }): Promise<string[]> {
-    const { base64Image } = payload;
-    const model = 'gemini-2.5-flash';
-    const prompt = "Analyze this receipt image. Extract only the names of the food ingredients purchased. Return the result as a JSON array of strings in English. For example: [\"Egg\", \"Green Onion\", \"Tofu\"]. Do not include quantities, prices, or any other text.";
+  const { base64Image } = payload;
+  const model = 'gemini-2.5-flash';
+  const prompt = "Analyze this receipt image. Extract only the names of the food ingredients purchased. Return the result as a JSON array of strings in English. For example: [\"Egg\", \"Green Onion\", \"Tofu\"]. Do not include quantities, prices, or any other text.";
 
-    const imagePart = {
-      inlineData: {
-        mimeType: 'image/jpeg',
-        data: base64Image,
-      },
-    };
+  const imagePart = {
+    inlineData: {
+      mimeType: 'image/jpeg',
+      data: base64Image,
+    },
+  };
 
-    const textPart = { text: prompt };
+  const textPart = { text: prompt };
 
-    const response: GenerateContentResponse = await ai.models.generateContent({
-        model: model,
-        contents: { parts: [imagePart, textPart] },
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: Type.ARRAY,
-                items: { type: Type.STRING }
-            }
-        }
-    });
-    const jsonText = response.text.trim();
-    return JSON.parse(jsonText);
+  const response: GenerateContentResponse = await ai.models.generateContent({
+    model: model,
+    contents: { parts: [imagePart, textPart] },
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.ARRAY,
+        items: { type: Type.STRING }
+      }
+    }
+  });
+  const jsonText = response.text.trim();
+  return JSON.parse(jsonText);
 }
 
 async function handleChatWithAIChef(ai: GoogleGenAI, payload: { history: ChatMessage[], message: string, settings: UserSettings, language: 'en' | 'ko', recipeContext?: Recipe | null }): Promise<string> {
-    const { history, message, settings, language, recipeContext } = payload;
-    // Updated to use the Pro model for better reasoning and chat experience
-    const model = 'gemini-2.5-pro';
-    const targetLanguage = language === 'ko' ? 'Korean' : 'English';
-    
-    let systemInstruction = `
+  const { history, message, settings, language, recipeContext } = payload;
+  // Updated to use the Pro model for better reasoning and chat experience
+  const model = 'gemini-2.5-pro';
+  const targetLanguage = language === 'ko' ? 'Korean' : 'English';
+
+  let systemInstruction = `
       You are 'AI Chef', a helpful and friendly cooking assistant for the OhMyCook app.
       
       USER PROFILE:
@@ -190,27 +237,27 @@ async function handleChatWithAIChef(ai: GoogleGenAI, payload: { history: ChatMes
       - Answer in **${targetLanguage}**.
       - Keep answers concise, friendly, and easy to understand.
     `;
-    
-    if (recipeContext) {
-        systemInstruction += `
+
+  if (recipeContext) {
+    systemInstruction += `
         
         CURRENT RECIPE CONTEXT:
         Name: ${recipeContext.recipeName}
         Ingredients: ${recipeContext.ingredients.join(', ')}
         Instructions: ${recipeContext.instructions.join('\n')}
         `;
-    }
+  }
 
-    const chat = ai.chats.create({
-        model: model,
-        config: {
-            systemInstruction: systemInstruction,
-        },
-        history: history as any
-    });
+  const chat = ai.chats.create({
+    model: model,
+    config: {
+      systemInstruction: systemInstruction,
+    },
+    history: history as any
+  });
 
-    const result = await chat.sendMessage({ message });
-    return result.text;
+  const result = await chat.sendMessage({ message });
+  return result.text;
 }
 
 export async function POST(request: Request) {
@@ -222,30 +269,30 @@ export async function POST(request: Request) {
 
   try {
     switch (action) {
-        case 'getRecipeRecommendations':
-          result = await handleGetRecipeRecommendations(ai, payload);
-          break;
-        case 'getRecipeDetails':
-           result = await handleGetRecipeDetails(ai, payload);
-           break;
-        case 'analyzeReceipt':
-          result = await handleAnalyzeReceipt(ai, payload);
-          break;
-        case 'chatWithAIChef':
-          result = await handleChatWithAIChef(ai, payload);
-          break;
-        default:
-          throw new Error('Invalid action');
-      }
-    
-      return new Response(JSON.stringify({ result }), {
-        headers: { 'Content-Type': 'application/json' },
-      });
+      case 'getRecipeRecommendations':
+        result = await handleGetRecipeRecommendations(ai, payload);
+        break;
+      case 'getRecipeDetails':
+        result = await handleGetRecipeDetails(ai, payload);
+        break;
+      case 'analyzeReceipt':
+        result = await handleAnalyzeReceipt(ai, payload);
+        break;
+      case 'chatWithAIChef':
+        result = await handleChatWithAIChef(ai, payload);
+        break;
+      default:
+        throw new Error('Invalid action');
+    }
+
+    return new Response(JSON.stringify({ result }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (error) {
-      console.error("API Error:", error);
-      return new Response(JSON.stringify({ error: (error as Error).message }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' },
-      });
+    console.error("API Error:", error);
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 }

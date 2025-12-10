@@ -24,6 +24,8 @@ export interface Recipe {
   instructions: string[]; // Empty initially
   cuisine: string;
   isDetailsLoaded?: boolean; // Flag to check if details are fetched
+  imageSearchQuery?: string;
+  imageUrl?: string;
 }
 
 export interface ChatMessage {

@@ -53,3 +53,22 @@ export interface User {
   password: string;
   hasCompletedOnboarding: boolean;
 }
+
+export interface UserProfileRecord {
+  id: string;
+  email: string;
+  display_name?: string | null;
+  has_completed_onboarding?: boolean;
+  preferred_cuisines?: string[];
+}
+
+export interface RecipeSearchCount {
+  recipe_name: string;
+  search_count: number;
+}
+
+export interface UserIngredientRecord {
+  user_id: string;
+  ingredient_name: string;
+  quantity: string;
+}

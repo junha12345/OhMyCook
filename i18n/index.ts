@@ -7,6 +7,7 @@ export const translations = {
     mainTitle: 'OhMyCook',
     mainSubtitle: 'AI custom recipes made with ingredients from your fridge',
     loginButton: 'Login / Sign Up',
+    getStarted: 'Get Started',
     homeFooter: 'Meet AI that recommends recipes when you select ingredients',
     // Home Screen Menu
     profileTitle: 'Profile',
@@ -25,6 +26,18 @@ export const translations = {
     shoppingListSubtitle: 'Manage your grocery needs',
     savedRecipesTitle: 'Saved Recipes',
     savedRecipesSubtitle: 'Your favorite dishes',
+    // Navigation
+    cook: 'Cook',
+    popular: 'Popular',
+    profile: 'Profile',
+    navigate: 'Navigate',
+    // Settings
+    settings: 'Settings',
+    language: 'Language',
+    generateRecipe: 'Generate Recipe',
+    selectIngredients: 'Select Ingredients',
+    noIngredients: 'No ingredients found. Add some to your fridge!',
+    done: 'Done',
     // Onboarding
     onboardingTitle: 'Please select your cooking level',
     onboardingSubtitle: 'We recommend recipes that match your skill level',
@@ -216,6 +229,7 @@ export const translations = {
     mainTitle: 'OhMyCook',
     mainSubtitle: '냉장고 재료로 만드는 AI 맞춤 레시피',
     loginButton: '로그인 / 회원가입',
+    getStarted: '시작하기',
     homeFooter: '재료를 선택하고 AI가 추천하는 레시피를 만나보세요',
     // Home Screen Menu
     profileTitle: '프로필',
@@ -234,6 +248,18 @@ export const translations = {
     shoppingListSubtitle: '구매할 재료 관리',
     savedRecipesTitle: '저장된 레시피',
     savedRecipesSubtitle: '즐겨찾는 요리',
+    // Navigation
+    cook: '요리',
+    popular: '인기',
+    profile: '프로필',
+    navigate: '이동',
+    // Settings
+    settings: '설정',
+    language: '언어',
+    generateRecipe: '레시피 생성',
+    selectIngredients: '재료 선택',
+    noIngredients: '재료가 없습니다. 냉장고에 재료를 추가해주세요!',
+    done: '완료',
     // Onboarding
     onboardingTitle: '요리 수준을 선택해주세요',
     onboardingSubtitle: '당신의 요리 실력에 맞는 레시피를 추천해드립니다',

@@ -1,16 +1,16 @@
 import React, { useState, useRef } from 'react';
-import { PlusIcon, SearchIcon, XIcon, CameraIcon } from './icons';
+import { PlusIcon, SearchIcon, XIcon, CameraIcon, SpatulaIcon } from './icons';
 import { Ingredient } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 import { getIngredientCategory, getIngredientTranslation, INGREDIENT_CATEGORIES, getIngredientEmoji, ALL_INGREDIENTS } from '../data/ingredients';
-import Header from './Header';
+import MainHeader from './MainHeader';
 import Spinner from './Spinner';
 
 interface IngredientManagerProps {
   ingredients: Ingredient[];
   setIngredients: React.Dispatch<React.SetStateAction<Ingredient[]>>;
-  onBack: () => void;
-  // onNavigate removed as it is no longer needed for scanning
+  onBack?: () => void;
+  onGenerateRecipe?: () => void;
 }
 
 const fileToBase64 = (file: File): Promise<string> => {
@@ -22,7 +22,7 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-const IngredientManager: React.FC<IngredientManagerProps> = ({ ingredients, setIngredients, onBack }) => {
+const IngredientManager: React.FC<IngredientManagerProps> = ({ ingredients, setIngredients, onBack, onGenerateRecipe }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchSuggestions, setSearchSuggestions] = useState<(typeof ALL_INGREDIENTS[0])[]>([]);
   const [isScanning, setIsScanning] = useState(false);
@@ -103,61 +103,60 @@ const IngredientManager: React.FC<IngredientManagerProps> = ({ ingredients, setI
   });
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      <Header title={t('ingredientManagerTitle')} onBack={onBack} />
+    <div className="flex flex-col h-screen bg-background relative">
+      <MainHeader />
 
       <div className="p-4 pb-0">
-        <div className="relative mb-4">
-          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={handleSearchChange}
-            placeholder={t('searchIngredients')}
-            className="w-full bg-surface border border-line-light rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
-          />
-          {searchSuggestions.length > 0 && (
-            <ul className="absolute z-10 w-full mt-1 border border-line-light rounded-lg max-h-60 overflow-y-auto bg-surface shadow-lg">
-              {INGREDIENT_CATEGORIES.map(category => {
-                const categorySuggestions = searchSuggestions.filter(ing => getIngredientCategory(ing.en) === category);
-                if (categorySuggestions.length === 0) return null;
+        <div className="flex gap-2 mb-4 relative z-20">
+          <div className="relative flex-grow">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={handleSearchChange}
+              placeholder={t('searchIngredients')}
+              className="w-full bg-surface border border-line-light rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
+            />
+            {searchSuggestions.length > 0 && (
+              <ul className="absolute z-10 w-full mt-1 border border-line-light rounded-lg max-h-60 overflow-y-auto bg-surface shadow-lg">
+                {INGREDIENT_CATEGORIES.map(category => {
+                  const categorySuggestions = searchSuggestions.filter(ing => getIngredientCategory(ing.en) === category);
+                  if (categorySuggestions.length === 0) return null;
 
-                return (
-                  <React.Fragment key={category}>
-                    <li className="px-3 py-1 bg-brand-light/50 text-xs font-bold text-text-secondary uppercase">
-                      {t(category as any)}
-                    </li>
-                    {categorySuggestions.map(ing => (
-                      <li key={ing.en}>
-                        <button onClick={() => handleAddIngredient(ing.en)} className="w-full text-left p-2 pl-4 text-sm text-text-primary hover:bg-brand-light flex items-center gap-2">
-                          <span>{getIngredientEmoji(ing.en)}</span>
-                          <span>{getIngredientTranslation(ing.en, language)}</span>
-                          <PlusIcon className="w-4 h-4 ml-auto text-brand-primary" />
-                        </button>
+                  return (
+                    <React.Fragment key={category}>
+                      <li className="px-3 py-1 bg-brand-light/50 text-xs font-bold text-text-secondary uppercase">
+                        {t(category as any)}
                       </li>
-                    ))}
-                  </React.Fragment>
-                );
-              })}
-            </ul>
-          )}
-        </div>
+                      {categorySuggestions.map(ing => (
+                        <li key={ing.en}>
+                          <button onClick={() => handleAddIngredient(ing.en)} className="w-full text-left p-2 pl-4 text-sm text-text-primary hover:bg-brand-light flex items-center gap-2">
+                            <span>{getIngredientEmoji(ing.en)}</span>
+                            <span>{getIngredientTranslation(ing.en, language)}</span>
+                            <PlusIcon className="w-4 h-4 ml-auto text-brand-primary" />
+                          </button>
+                        </li>
+                      ))}
+                    </React.Fragment>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
 
-        {/* Scan Button Inline */}
-        <div className="mb-4">
           <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isScanning}
-            className="w-full bg-surface border border-brand-primary text-brand-primary font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:bg-brand-light transition-colors"
+            className="flex-none w-12 h-12 bg-surface border border-brand-primary text-brand-primary rounded-xl flex items-center justify-center hover:bg-brand-light transition-colors"
+            aria-label={t('scanWithReceipt')}
           >
-            {isScanning ? <Spinner /> : <CameraIcon className="w-5 h-5" />}
-            <span>{isScanning ? t('scanning') + '...' : t('scanWithReceipt')}</span>
+            {isScanning ? <Spinner /> : <CameraIcon className="w-6 h-6" />}
           </button>
         </div>
       </div>
 
-      <div className="flex-grow p-4 pt-0 overflow-y-auto">
+      <div className="flex-grow p-4 pt-0 overflow-y-auto pb-40">
         {filteredIngredients.length === 0 ? (
           <p className="text-center text-text-secondary mt-10">{searchTerm ? t('noSearchResults') : t('pleaseAddIngredients')}</p>
         ) : (
@@ -192,6 +191,18 @@ const IngredientManager: React.FC<IngredientManagerProps> = ({ ingredients, setI
             })}
           </div>
         )}
+      </div>
+
+      <div className="fixed bottom-24 left-0 right-0 px-4 z-30 max-w-lg mx-auto">
+        <button
+          onClick={() => {
+            if (onGenerateRecipe) onGenerateRecipe();
+          }}
+          className="w-full bg-brand-primary text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg hover:bg-brand-dark transition-colors"
+        >
+          <SpatulaIcon className="w-6 h-6" />
+          <span>{t('generateRecipe')}</span>
+        </button>
       </div>
     </div>
   );

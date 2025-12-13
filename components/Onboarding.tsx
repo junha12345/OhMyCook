@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { UserSettings } from '../types';
 import { useLanguage } from '../context/LanguageContext';
-import { FireIcon, XIcon, SearchIcon } from './icons';
+import { FireIcon, XIcon, SearchIcon, MicrowaveIcon, InductionIcon, GasStoveIcon, AirFryerIcon, OvenIcon, BlenderIcon } from './icons';
 import { COMMON_INGREDIENTS, getIngredientCategory, getIngredientTranslation, ALL_INGREDIENTS, INGREDIENT_CATEGORIES, getIngredientEmoji } from '../data/ingredients';
 
 interface OnboardingProps {
@@ -30,6 +30,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack
 
   const [customIngredientSearch, setCustomIngredientSearch] = useState('');
   const [searchSuggestions, setSearchSuggestions] = useState<(typeof ALL_INGREDIENTS[0])[]>([]);
+
+  const [allergySearch, setAllergySearch] = useState('');
+  const [allergySuggestions, setAllergySuggestions] = useState<(typeof ALL_INGREDIENTS[0])[]>([]);
 
   const handleNext = () => setStep(prev => Math.min(prev + 1, totalSteps));
   const handlePrev = () => setStep(prev => Math.max(prev - 1, 1));
@@ -74,17 +77,24 @@ const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack
             <h2 className="text-xl font-bold mb-1">{t('onboardingTitle')}</h2>
             <p className="text-text-secondary mb-6">{t('onboardingSubtitle')}</p>
             <div className="space-y-3">
-              {levels.map(level => (
-                <button key={level} onClick={() => setSettings({ ...settings, cookingLevel: level })} className={`w-full text-left p-4 border rounded-xl transition-colors ${settings.cookingLevel === level ? 'border-brand-primary bg-brand-light' : 'border-line-light bg-surface'}`}>
-                  <p className="font-bold">{t(level.toLowerCase() as any)}</p>
-                  <p className="text-sm text-text-secondary">{t((level.toLowerCase() + 'Desc') as any)}</p>
-                </button>
-              ))}
+              {levels.map(level => {
+                const emojis = { Beginner: '🐣', Intermediate: '👨‍🍳', Advanced: '👑' };
+                return (
+                  <button key={level} onClick={() => setSettings({ ...settings, cookingLevel: level })} className={`w-full text-left p-4 border rounded-xl transition-colors flex items-center gap-4 ${settings.cookingLevel === level ? 'border-brand-primary bg-brand-light' : 'border-line-light bg-surface'}`}>
+                    <span className="text-3xl">{emojis[level]}</span>
+                    <div>
+                      <p className="font-bold text-lg">{t(level.toLowerCase() as any)}</p>
+                      <p className="text-sm text-text-secondary">{t((level.toLowerCase() + 'Desc') as any)}</p>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         );
       case 2: // Allergies
-        const allergies: (keyof (typeof import('../i18n'))['translations']['en'])[] = ['egg', 'milk', 'nuts', 'shellfish', 'wheat', 'soy', 'fish'];
+        const defaultAllergies: (keyof (typeof import('../i18n'))['translations']['en'])[] = ['egg', 'milk', 'nuts', 'shellfish', 'wheat', 'soy', 'fish'];
+
         const handleAllergyToggle = (allergy: string) => {
           const currentAllergies = settings.allergies;
           if (currentAllergies.includes(allergy)) {
@@ -93,16 +103,100 @@ const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack
             setSettings({ ...settings, allergies: [...currentAllergies, allergy] });
           }
         };
+
+        const handleAllergySearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+          const value = e.target.value;
+          setAllergySearch(value);
+
+          if (value.trim().length === 0) {
+            setAllergySuggestions([]);
+            return;
+          }
+
+          const lowerCaseValue = value.toLowerCase();
+          const filtered = ALL_INGREDIENTS.filter(
+            ing => (ing.en.toLowerCase().includes(lowerCaseValue) || ing.ko.toLowerCase().includes(lowerCaseValue)) && !settings.allergies.includes(getIngredientTranslation(ing.en, language))
+          ).slice(0, 10);
+          setAllergySuggestions(filtered);
+        };
+
+        const handleAllergySelect = (englishName: string) => {
+          const translatedName = getIngredientTranslation(englishName, language);
+          // We store the translated name or english name? The current system seems to use translated names for the buttons, 
+          // but keeping English identifiers might be safer. 
+          // Looking at the existing code: `t(allergyKey)` is passed to toggle. 
+          // `settings.allergies` stores what is passed to toggle. 
+          // If we want consistency, we should store what matches the display.
+          // However, mixing translated strings in storage is risky. 
+          // For now, I will match the existing pattern: store what the user sees/selects.
+
+          if (!settings.allergies.includes(translatedName)) {
+            handleAllergyToggle(translatedName);
+          }
+          setAllergySearch('');
+          setAllergySuggestions([]);
+        }
+
         return (
-          <div>
+          <div className="flex flex-col h-full">
             <h2 className="text-xl font-bold mb-1">{t('allergyTitle')}</h2>
             <p className="text-text-secondary mb-6">{t('allergySubtitle')}</p>
+
+            <div className="relative mb-6">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary" />
+              <input
+                type="text"
+                value={allergySearch}
+                onChange={handleAllergySearchChange}
+                placeholder={t('searchIngredients')}
+                className="w-full bg-surface border border-line-light rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
+              />
+              {allergySuggestions.length > 0 && (
+                <ul className="absolute z-10 w-full mt-1 border border-line-light rounded-lg max-h-60 overflow-y-auto bg-surface shadow-lg">
+                  {allergySuggestions.map(ing => (
+                    <li key={ing.en}>
+                      <button onClick={() => handleAllergySelect(ing.en)} className="w-full text-left p-2 pl-4 text-sm text-text-primary hover:bg-brand-light flex items-center gap-2">
+                        <span>{getIngredientEmoji(ing.en)}</span>
+                        <span>{getIngredientTranslation(ing.en, language)}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
             <div className="flex flex-wrap gap-3">
-              {allergies.map(allergyKey => (
-                <button key={allergyKey} onClick={() => handleAllergyToggle(t(allergyKey))} className={`px-4 py-2 border rounded-lg transition-colors ${settings.allergies.includes(t(allergyKey)) ? 'border-brand-primary bg-brand-light' : 'border-line-light bg-surface'}`}>
-                  {t(allergyKey)}
-                </button>
-              ))}
+              {defaultAllergies.map(allergyKey => {
+                const allergyEmojis: Record<string, string> = {
+                  egg: '🥚', milk: '🥛', nuts: '🥜', shellfish: '🦐', wheat: '🍞', soy: '🫘', fish: '🐟'
+                };
+                const translated = t(allergyKey);
+                return (
+                  <button key={allergyKey} onClick={() => handleAllergyToggle(translated)} className={`px-4 py-2 border rounded-full transition-colors flex items-center gap-2 ${settings.allergies.includes(translated) ? 'border-brand-primary bg-brand-light' : 'border-line-light bg-surface'}`}>
+                    <span>{allergyEmojis[allergyKey]}</span>
+                    <span>{translated}</span>
+                  </button>
+                );
+              })}
+
+              {/* Render selected allergies that are NOT in default list */}
+              {settings.allergies.filter(a => !defaultAllergies.map(k => t(k)).includes(a)).map(allergyName => {
+                // Try to find emoji if possible, otherwise generic
+                // Note: allergyName here is likely translated if we followed logic above. 
+                // Finding original english name to get emoji is hard if we only have translated.
+                // Ideally we should refactor to store keys. But to fix this quickly:
+                // We can search ALL_INGREDIENTS for name match.
+                const foundIng = ALL_INGREDIENTS.find(i => getIngredientTranslation(i.en, language) === allergyName);
+                const emoji = foundIng ? foundIng.emoji : '⚠️';
+
+                return (
+                  <button key={allergyName} onClick={() => handleAllergyToggle(allergyName)} className="px-4 py-2 border border-brand-primary bg-brand-light rounded-full transition-colors flex items-center gap-2 animate-fade-in">
+                    <span>{emoji}</span>
+                    <span>{allergyName}</span>
+                    <XIcon className="w-4 h-4 ml-1" />
+                  </button>
+                );
+              })}
             </div>
           </div>
         );
@@ -140,15 +234,19 @@ const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack
             <h2 className="text-xl font-bold mb-1">{t('cookTimeTitle')}</h2>
             <p className="text-text-secondary mb-6">{t('cookTimeSubtitle')}</p>
             <div className="space-y-3">
-              {timeOptions.map(option => (
-                <button
-                  key={option.labelKey}
-                  onClick={() => setSettings({ ...settings, maxCookTime: option.value })}
-                  className={`w-full text-left p-4 border rounded-xl transition-colors ${settings.maxCookTime === option.value ? 'border-brand-primary bg-brand-light' : 'border-line-light bg-surface'}`}
-                >
-                  <p className="font-bold">{t(option.labelKey)}</p>
-                </button>
-              ))}
+              {timeOptions.map(option => {
+                const timeEmojis: Record<number, string> = { 10: '⚡', 30: '⏰', 120: '🕰️' };
+                return (
+                  <button
+                    key={option.labelKey}
+                    onClick={() => setSettings({ ...settings, maxCookTime: option.value })}
+                    className={`w-full text-left p-4 border rounded-xl transition-colors flex items-center gap-4 ${settings.maxCookTime === option.value ? 'border-brand-primary bg-brand-light' : 'border-line-light bg-surface'}`}
+                  >
+                    <span className="text-3xl">{timeEmojis[option.value]}</span>
+                    <p className="font-bold text-lg">{t(option.labelKey)}</p>
+                  </button>
+                );
+              })}
             </div>
           </div>
         );
@@ -167,15 +265,26 @@ const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack
             <h2 className="text-xl font-bold mb-1">{t('kitchenToolsTitle')}</h2>
             <p className="text-text-secondary mb-6">{t('kitchenToolsSubtitle')}</p>
             <div className="grid grid-cols-3 gap-3">
-              {tools.map(toolKey => (
-                <button key={toolKey} onClick={() => handleToolToggle(t(toolKey))} className={`py-3 border rounded-lg transition-colors text-center ${settings.availableTools.includes(t(toolKey)) ? 'border-brand-primary bg-brand-light' : 'border-line-light bg-surface'}`}>
-                  {t(toolKey)}
-                </button>
-              ))}
+              {tools.map(toolKey => {
+                const ToolIcon = {
+                  microwave: MicrowaveIcon,
+                  induction: InductionIcon,
+                  gasStove: GasStoveIcon,
+                  airFryer: AirFryerIcon,
+                  oven: OvenIcon,
+                  blender: BlenderIcon
+                }[toolKey] || MicrowaveIcon; // Fallback
+
+                return (
+                  <button key={toolKey} onClick={() => handleToolToggle(t(toolKey))} className={`py-4 border rounded-xl transition-colors text-center flex flex-col items-center justify-center gap-2 ${settings.availableTools.includes(t(toolKey)) ? 'border-brand-primary bg-brand-light' : 'border-line-light bg-surface'}`}>
+                    <ToolIcon className={`w-8 h-8 ${settings.availableTools.includes(t(toolKey)) ? 'text-brand-primary' : 'text-text-secondary'}`} />
+                    <span className="text-sm font-medium">{t(toolKey)}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         );
-      case 6: // Initial Ingredients
       case 6: // Initial Ingredients
         return (
           <div className="flex flex-col h-full">

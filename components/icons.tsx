@@ -132,3 +132,48 @@ export const CameraIcon: React.FC<{ className?: string }> = ({ className }) => (
     <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" />
   </svg>
 );
+
+export const MicrowaveIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <rect x="2" y="4" width="20" height="15" rx="3"></rect><line x1="18" y1="8" x2="18" y2="8"></line><line x1="18" y1="11" x2="18" y2="11"></line><line x1="18" y1="14" x2="18" y2="14"></line><line x1="6" y1="8" x2="14" y2="8"></line><line x1="6" y1="12" x2="14" y2="12"></line><line x1="6" y1="16" x2="14" y2="16"></line>
+  </svg>
+);
+
+export const InductionIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <rect x="2" y="2" width="20" height="20" rx="4" ry="4"></rect><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle>
+  </svg>
+);
+
+export const GasStoveIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <rect x="2" y="2" width="20" height="20" rx="2"></rect><circle cx="7.5" cy="7.5" r="2.5"></circle><circle cx="16.5" cy="7.5" r="2.5"></circle><circle cx="7.5" cy="16.5" r="2.5"></circle><circle cx="16.5" cy="16.5" r="2.5"></circle>
+  </svg>
+);
+
+export const AirFryerIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M4 10c0-4 2-8 8-8s8 4 8 8v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4v-6z"></path><line x1="4" y1="10" x2="20" y2="10"></line><path d="M12 14v2"></path><rect x="9" y="14" width="6" height="4" rx="1"></rect>
+  </svg>
+);
+
+export const OvenIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M21 9V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v3"></path>
+    <path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z"></path>
+    <path d="M8 12h8"></path>
+    <circle cx="12" cy="15" r="0.5" fill="currentColor"></circle>
+  </svg>
+);
+
+export const BlenderIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M6 6h12l-2 11a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2L6 6z"></path><line x1="9" y1="3" x2="15" y2="3"></line><line x1="12" y1="3" x2="12" y2="6"></line><path d="M6 19h12"></path>
+  </svg>
+);
+export const ChefHatIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z" />
+    <line x1="6" y1="17" x2="18" y2="17" />
+  </svg>
+);

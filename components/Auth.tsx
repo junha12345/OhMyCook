@@ -8,10 +8,11 @@ interface AuthProps {
   onLogin: (user: User) => void;
   onSignup: (newUser: Pick<User, 'email' | 'password'>) => void;
   onBack: () => void;
+  initialMode?: 'login' | 'signup';
 }
 
-const Auth: React.FC<AuthProps> = ({ users, onLogin, onSignup, onBack }) => {
-  const [isLoginMode, setIsLoginMode] = useState(true);
+const Auth: React.FC<AuthProps> = ({ users, onLogin, onSignup, onBack, initialMode = 'login' }) => {
+  const [isLoginMode, setIsLoginMode] = useState(initialMode === 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -76,7 +77,7 @@ const Auth: React.FC<AuthProps> = ({ users, onLogin, onSignup, onBack }) => {
               />
             </div>
           </div>
-          
+
           {error && <p className="text-red-500 text-xs mt-4 text-center">{error}</p>}
           {message && <p className="text-green-500 text-xs mt-4 text-center">{message}</p>}
 
@@ -92,7 +93,7 @@ const Auth: React.FC<AuthProps> = ({ users, onLogin, onSignup, onBack }) => {
             {t(isLoginMode ? 'switchToSignup' : 'switchToLogin')}
           </button>
         </div>
-        
+
         <div className="text-center mt-4">
           <button onClick={onBack} className="text-sm text-text-secondary">
             &larr; {t('backToHome')}

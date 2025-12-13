@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { UserSettings, Ingredient, ShoppingListItem, Recipe, User } from './types';
+import { UserSettings, Ingredient, ShoppingListItem, Recipe, User, ChatMessage } from './types';
 import IngredientManager from './components/IngredientManager';
 import RecipeRecommendations from './components/RecipeRecommendations';
 import AIChef from './components/AIChef';
@@ -41,6 +41,9 @@ const AppContent: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<Tab>('cook');
   const [previousView, setPreviousView] = useState<View>('tab');
   const [chatContext, setChatContext] = useState<Recipe | null>(null);
+  const [chatHistories, setChatHistories] = useState<Record<string, ChatMessage[]>>({});
+  const [chatOpenedFromRecipe, setChatOpenedFromRecipe] = useState<Recipe | null>(null);
+  const [openedRecipeModal, setOpenedRecipeModal] = useState<Recipe | null>(null);
 
   const [users, setUsers] = useLocalStorage<User[]>('ohmycook-users', []);
   const [currentUser, setCurrentUser] = useLocalStorage<User | null>('ohmycook-currentUser', null);
@@ -69,7 +72,23 @@ const AppContent: React.FC = () => {
 
   const handleStartChat = (recipe: Recipe) => {
     setChatContext(recipe);
+    setChatOpenedFromRecipe(recipe);
+    setOpenedRecipeModal(recipe); // Remember which modal was open
     handleNavigate('chat');
+  };
+
+  const handleChatMessagesUpdate = (recipeKey: string, messages: ChatMessage[]) => {
+    setChatHistories(prev => ({
+      ...prev,
+      [recipeKey]: messages
+    }));
+  };
+
+  const handleChatBack = () => {
+    setCurrentView(previousView);
+    // Keep openedRecipeModal so RecipeRecommendations can reopen it
+    // Clear chatOpenedFromRecipe after navigating back
+    setChatOpenedFromRecipe(null);
   };
 
   const handleSaveSettings = (newSettings: UserSettings, initialIngredients: string[] = []) => {
@@ -174,6 +193,8 @@ const AppContent: React.FC = () => {
             savedRecipes={savedRecipes}
             onToggleSaveRecipe={handleToggleSaveRecipe}
             onStartChat={handleStartChat}
+            initialOpenedRecipe={openedRecipeModal}
+            onRecipeModalChange={setOpenedRecipeModal}
           />
         );
       case 'profile':
@@ -213,19 +234,26 @@ const AppContent: React.FC = () => {
       case 'recommendations':
         return <RecipeRecommendations
           ingredients={ingredients}
-          onBack={() => { setCurrentView('tab'); setCurrentTab('cook'); }}
+          onBack={() => { setCurrentView('tab'); setCurrentTab('cook'); setOpenedRecipeModal(null); }}
           shoppingList={shoppingList}
           onToggleShoppingListItem={handleToggleShoppingListItem}
           savedRecipes={savedRecipes}
           onToggleSaveRecipe={handleToggleSaveRecipe}
           onStartChat={handleStartChat}
+          initialOpenedRecipe={openedRecipeModal}
+          onRecipeModalChange={setOpenedRecipeModal}
         />;
 
       case 'chat':
+        const recipeKey = chatContext?.recipeName || '__general__';
         return <AIChef
           settings={settings}
-          onBack={() => { setCurrentView(previousView); setChatContext(null); }}
+          onBack={handleChatBack}
           recipeContext={chatContext}
+          initialMessages={chatHistories[recipeKey] || []}
+          onMessagesUpdate={(messages) => handleChatMessagesUpdate(recipeKey, messages)}
+          openedFromRecipe={chatOpenedFromRecipe}
+          onCloseRecipeContext={() => setChatOpenedFromRecipe(null)}
         />;
 
       case 'shoppingList':

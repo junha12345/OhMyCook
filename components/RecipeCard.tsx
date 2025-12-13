@@ -236,7 +236,7 @@ export const RecipeDetailModal: React.FC<{
 
                 <button
                     onClick={() => onStartChat(recipe)}
-                    className="absolute bottom-6 right-6 bg-brand-primary text-white p-3 rounded-full shadow-lg hover:scale-110 transition-transform z-30"
+                    className="absolute bottom-24 right-6 bg-brand-primary text-white p-3 rounded-full shadow-lg hover:scale-110 transition-transform z-30"
                     title={t('askAIChef')}
                 >
                     <ChatBubbleIcon className="w-6 h-6" />

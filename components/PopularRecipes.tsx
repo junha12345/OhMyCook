@@ -14,12 +14,33 @@ interface PopularRecipesProps {
   savedRecipes: Recipe[];
   onToggleSaveRecipe: (recipe: Recipe) => void;
   onStartChat: (recipe: Recipe) => void;
+  initialOpenedRecipe?: Recipe | null;
+  onRecipeModalChange?: (recipe: Recipe | null) => void;
 }
 
-const PopularRecipes: React.FC<PopularRecipesProps> = ({ onBack, shoppingList, onToggleShoppingListItem, savedRecipes, onToggleSaveRecipe, onStartChat }) => {
+const PopularRecipes: React.FC<PopularRecipesProps> = ({
+  onBack,
+  shoppingList,
+  onToggleShoppingListItem,
+  savedRecipes,
+  onToggleSaveRecipe,
+  onStartChat,
+  initialOpenedRecipe,
+  onRecipeModalChange
+}) => {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('today');
-  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(initialOpenedRecipe || null);
+
+  const handleRecipeSelect = (recipe: Recipe) => {
+    setSelectedRecipe(recipe);
+    onRecipeModalChange?.(recipe);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedRecipe(null);
+    onRecipeModalChange?.(null);
+  };
 
   // In a real app, this data would change based on the activeTab
   const recipesToShow = popularRecipesData;
@@ -56,7 +77,7 @@ const PopularRecipes: React.FC<PopularRecipesProps> = ({ onBack, shoppingList, o
 
         <div className="grid grid-cols-3 gap-3 mb-4">
           {recipesToShow.slice(0, 3).map((recipe, index) => (
-            <div key={index} onClick={() => setSelectedRecipe(recipe)} className="relative rounded-2xl overflow-hidden aspect-square shadow-subtle group cursor-pointer">
+            <div key={index} onClick={() => handleRecipeSelect(recipe)} className="relative rounded-2xl overflow-hidden aspect-square shadow-subtle group cursor-pointer">
               <ImageWithFallback src={getImageUrl(recipe, 300)} alt={recipe.recipeName} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
               <span className="absolute top-2 left-2 bg-brand-primary text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full">{index + 1}</span>
@@ -67,7 +88,7 @@ const PopularRecipes: React.FC<PopularRecipesProps> = ({ onBack, shoppingList, o
 
         <div className="space-y-2">
           {recipesToShow.slice(3).map((recipe, index) => (
-            <div key={index} onClick={() => setSelectedRecipe(recipe)} className="flex items-center bg-surface p-3 rounded-xl shadow-subtle cursor-pointer">
+            <div key={index} onClick={() => handleRecipeSelect(recipe)} className="flex items-center bg-surface p-3 rounded-xl shadow-subtle cursor-pointer">
               <span className="text-lg font-bold w-8 text-center text-text-secondary">{index + 4}</span>
               <ImageWithFallback src={getImageUrl(recipe, 100)} alt={recipe.recipeName} className="w-16 h-16 rounded-lg object-cover mx-4" />
               <div className="flex-grow">
@@ -82,7 +103,7 @@ const PopularRecipes: React.FC<PopularRecipesProps> = ({ onBack, shoppingList, o
       {selectedRecipe && (
         <RecipeDetailModal
           recipe={selectedRecipe}
-          onClose={() => setSelectedRecipe(null)}
+          onClose={handleCloseModal}
           shoppingList={shoppingList}
           onToggleShoppingListItem={onToggleShoppingListItem}
           isSaved={savedRecipes.some(r => r.recipeName === selectedRecipe.recipeName)}

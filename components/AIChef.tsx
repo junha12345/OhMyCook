@@ -11,10 +11,23 @@ interface AIChefProps {
   onBack: () => void;
   recipeContext: Recipe | null;
   showBack?: boolean;
+  initialMessages?: ChatMessage[];
+  onMessagesUpdate?: (messages: ChatMessage[]) => void;
+  openedFromRecipe?: Recipe | null;
+  onCloseRecipeContext?: () => void;
 }
 
-const AIChef: React.FC<AIChefProps> = ({ settings, onBack, recipeContext, showBack = true }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+const AIChef: React.FC<AIChefProps> = ({
+  settings,
+  onBack,
+  recipeContext,
+  showBack = true,
+  initialMessages = [],
+  onMessagesUpdate,
+  openedFromRecipe,
+  onCloseRecipeContext
+}) => {
+  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,6 +37,21 @@ const AIChef: React.FC<AIChefProps> = ({ settings, onBack, recipeContext, showBa
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Sync messages to parent when they change
+  useEffect(() => {
+    if (onMessagesUpdate && messages.length > 0) {
+      onMessagesUpdate(messages);
+    }
+  }, [messages, onMessagesUpdate]);
+
+  // Handle back button
+  const handleBack = () => {
+    if (openedFromRecipe) {
+      onCloseRecipeContext?.();
+    }
+    onBack();
+  };
 
   const handleSend = async (messageText?: string) => {
     const textToSend = messageText || input;
@@ -65,7 +93,7 @@ const AIChef: React.FC<AIChefProps> = ({ settings, onBack, recipeContext, showBa
 
   return (
     <div className={`flex flex-col h-screen bg-background ${!showBack ? 'pb-24' : ''}`}>
-      <Header title={headerTitle} onBack={onBack} showBack={showBack} />
+      <Header title={headerTitle} onBack={handleBack} showBack={showBack} />
 
       <div className="flex-grow p-4 overflow-y-auto space-y-4">
         {/* Initial Greeting */}
@@ -100,14 +128,18 @@ const AIChef: React.FC<AIChefProps> = ({ settings, onBack, recipeContext, showBa
       </div>
 
       <div className="p-4 border-t bg-background">
-        <p className="text-sm text-text-secondary mb-2">{t('suggestedQuestions')}</p>
-        <div className="flex flex-wrap gap-2 mb-4">
-          {suggestedQuestions.map(q => (
-            <button key={q} onClick={() => handleSend(t(q))} className="bg-surface border border-line-light text-sm text-text-primary px-3 py-1.5 rounded-lg">
-              {t(q)}
-            </button>
-          ))}
-        </div>
+        {messages.length === 0 && (
+          <>
+            <p className="text-sm text-text-secondary mb-2">{t('suggestedQuestions')}</p>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {suggestedQuestions.map(q => (
+                <button key={q} onClick={() => handleSend(t(q))} className="bg-surface border border-line-light text-sm text-text-primary px-3 py-1.5 rounded-lg">
+                  {t(q)}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
         <div className="flex items-center space-x-2">
           <input
             type="text"

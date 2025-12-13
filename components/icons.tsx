@@ -188,7 +188,8 @@ export const SparklesIcon: React.FC<{ className?: string }> = ({ className }) =>
 
 export const CheckCircleIcon: React.FC<{ className?: string; isFilled?: boolean }> = ({ className, isFilled }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill={isFilled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>
+    <circle cx="12" cy="12" r="10"></circle>
+    <polyline points="9 12 11.5 14.5 16 10" stroke={isFilled ? "white" : "currentColor"} strokeWidth="2"></polyline>
   </svg>
 );
 

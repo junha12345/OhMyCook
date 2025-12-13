@@ -17,13 +17,25 @@ interface RecipeRecommendationsProps {
   savedRecipes: Recipe[];
   onToggleSaveRecipe: (recipe: Recipe) => void;
   onStartChat: (recipe: Recipe) => void;
+  initialOpenedRecipe?: Recipe | null;
+  onRecipeModalChange?: (recipe: Recipe | null) => void;
 }
 
-const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({ ingredients, onBack, shoppingList, onToggleShoppingListItem, savedRecipes, onToggleSaveRecipe, onStartChat }) => {
+const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({
+  ingredients,
+  onBack,
+  shoppingList,
+  onToggleShoppingListItem,
+  savedRecipes,
+  onToggleSaveRecipe,
+  onStartChat,
+  initialOpenedRecipe,
+  onRecipeModalChange
+}) => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(initialOpenedRecipe || null);
   const { t, language } = useLanguage();
   const [isIngredientModalOpen, setIsIngredientModalOpen] = useState(false);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
@@ -102,6 +114,7 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({ ingredien
 
   const handleRecipeSelect = async (recipe: Recipe) => {
     setSelectedRecipe(recipe);
+    onRecipeModalChange?.(recipe);
 
     // Lazy load details if not already loaded
     if (!recipe.isDetailsLoaded) {
@@ -254,7 +267,7 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({ ingredien
         {selectedRecipe && (
           <RecipeDetailModal
             recipe={selectedRecipe}
-            onClose={() => setSelectedRecipe(null)}
+            onClose={() => { setSelectedRecipe(null); onRecipeModalChange?.(null); }}
             shoppingList={shoppingList}
             onToggleShoppingListItem={onToggleShoppingListItem}
             isSaved={savedRecipes.some(r => r.recipeName === selectedRecipe.recipeName)}

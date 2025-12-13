@@ -1,14 +1,12 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Recipe, Ingredient, RecipeFilters, ShoppingListItem } from '../types';
 import RecipeCard, { RecipeDetailModal } from './RecipeCard';
 import { Spinner, ProgressBar } from './Spinner';
 import { useLanguage } from '../context/LanguageContext';
-import Header from './Header';
-import FilterModal from './FilterModal';
+import MainHeader from './MainHeader';
 import IngredientSelectionModal from './IngredientSelectionModal';
 import { getIngredientTranslation } from '../data/ingredients';
-import { PlusIcon, XIcon } from './icons';
+import { PlusIcon, XIcon, SparklesIcon } from './icons';
 
 interface RecipeRecommendationsProps {
   ingredients: Ingredient[];
@@ -26,7 +24,6 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({ ingredien
   const [error, setError] = useState<string | null>(null);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const { t, language } = useLanguage();
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isIngredientModalOpen, setIsIngredientModalOpen] = useState(false);
   const [filters, setFilters] = useState<RecipeFilters>({
     cuisine: 'any',
@@ -128,29 +125,34 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({ ingredien
       }
     }
   };
-
-  const handleApplyFilters = (newFilters: RecipeFilters) => {
-    setFilters(newFilters);
-    setIsFilterModalOpen(false);
+  const defaultFilters: RecipeFilters = {
+    cuisine: 'any',
+    servings: 2,
+    spiciness: 'medium',
+    difficulty: 'medium',
+    maxCookTime: 45,
   };
+
+  const handleResetFilters = () => {
+    setFilters(defaultFilters);
+  };
+
+  const cuisineOptions: RecipeFilters['cuisine'][] = ['any', 'korean', 'japanese', 'chinese', 'western'];
+  const spicinessOptions: RecipeFilters['spiciness'][] = ['mild', 'medium', 'spicy'];
+  const difficultyOptions: RecipeFilters['difficulty'][] = ['easy', 'medium', 'hard'];
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      <Header title={t('aiRecTitle')} onBack={onBack} />
+      <MainHeader onBack={onBack} />
 
       <div className="flex-grow p-4 overflow-y-auto">
-        <div className="bg-brand-primary/10 text-brand-dark p-6 rounded-2xl mb-6 text-center">
-          <h2 className="text-xl font-bold mb-2">{t('aiRecBannerTitle')}</h2>
-          <p className="text-sm">{t('aiRecBannerSubtitle')}</p>
-        </div>
 
         {ingredients.length > 0 && (
-          <div className="mb-4 bg-surface p-4 rounded-2xl">
-            <h3 className="font-bold text-text-primary mb-2">{t('priorityIngredientsTitle')}</h3>
+          <div className="mb-6">
+            <h3 className="font-bold text-text-primary mb-2 text-lg">{t('priorityIngredientsTitle')}</h3>
             <p className="text-sm text-text-secondary mb-3">{t('priorityIngredientsSubtitle')}</p>
 
             <div className="flex flex-wrap gap-2">
-              {/* Selected Ingredients Chips */}
               {priorityIngredients.map(name => {
                 const ing = ingredients.find(i => i.name === name);
                 if (!ing) return null;
@@ -165,8 +167,6 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({ ingredien
                   </button>
                 );
               })}
-
-              {/* Add Button */}
               <button
                 onClick={() => setIsIngredientModalOpen(true)}
                 className="w-8 h-8 rounded-full border-2 border-dashed border-brand-primary/50 text-brand-primary flex items-center justify-center hover:bg-brand-primary/10 hover:border-brand-primary transition-all"
@@ -178,7 +178,6 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({ ingredien
           </div>
         )}
 
-
         {isIngredientModalOpen && (
           <IngredientSelectionModal
             isOpen={isIngredientModalOpen}
@@ -189,14 +188,86 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({ ingredien
           />
         )}
 
-        <div className="flex gap-2 mb-4">
-          <button onClick={() => setIsFilterModalOpen(true)} className="flex-1 bg-surface border border-line-light text-text-primary font-bold py-3 px-4 rounded-xl">
-            {t('filterRecipes')}
-          </button>
-          <button onClick={handleFetchRecipes} disabled={isLoading} className="flex-1 bg-brand-primary text-white font-bold py-3 px-4 rounded-xl disabled:opacity-50">
-            {t('findRecipes')}
-          </button>
+        <div className="space-y-6 mb-8 border-t border-line-light pt-6">
+          <div className="flex justify-between items-center">
+            <h3 className="font-bold text-text-primary text-lg">{t('filterRecipes')}</h3>
+            <button onClick={handleResetFilters} className="text-sm font-bold text-brand-primary hover:text-brand-dark transition-colors">
+              {t('resetFilters')}
+            </button>
+          </div>
+
+          {/* Cuisine */}
+          <div>
+            <label className="block text-sm font-semibold text-text-secondary mb-2">{t('cuisine')}</label>
+            <div className="flex flex-wrap gap-2">
+              {cuisineOptions.map(option => (
+                <button key={option} onClick={() => setFilters({ ...filters, cuisine: option })} className={`px-3 py-2 rounded-xl text-sm font-bold border transition-colors ${filters.cuisine === option ? 'bg-brand-primary border-brand-primary text-white' : 'bg-surface border-line-light text-text-secondary hover:bg-gray-50'}`}>
+                  {t(option)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Spiciness & Difficulty Row */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-text-secondary mb-2">{t('spiciness')}</label>
+              <div className="flex flex-col gap-2">
+                {spicinessOptions.map(option => (
+                  <button key={option} onClick={() => setFilters({ ...filters, spiciness: option })} className={`px-3 py-2 rounded-xl text-sm font-bold border w-full text-center transition-colors ${filters.spiciness === option ? 'bg-brand-primary border-brand-primary text-white' : 'bg-surface border-line-light text-text-secondary hover:bg-gray-50'}`}>
+                    {t(option)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-text-secondary mb-2">{t('difficulty')}</label>
+              <div className="flex flex-col gap-2">
+                {difficultyOptions.map(option => (
+                  <button key={option} onClick={() => setFilters({ ...filters, difficulty: option })} className={`px-3 py-2 rounded-xl text-sm font-bold border w-full text-center transition-colors ${filters.difficulty === option ? 'bg-brand-primary border-brand-primary text-white' : 'bg-surface border-line-light text-text-secondary hover:bg-gray-50'}`}>
+                    {t(option)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Servings & Time Row */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-text-secondary mb-2">{t('servings')}</label>
+              <div className="flex items-center gap-2 bg-surface border border-line-light rounded-xl p-1">
+                <button onClick={() => setFilters(f => ({ ...f, servings: Math.max(1, f.servings - 1) }))} className="w-8 h-8 flex items-center justify-center font-bold text-lg text-text-primary hover:bg-gray-100 rounded-lg">-</button>
+                <span className="flex-1 text-center font-bold text-text-primary">{filters.servings}</span>
+                <button onClick={() => setFilters(f => ({ ...f, servings: f.servings + 1 }))} className="w-8 h-8 flex items-center justify-center font-bold text-lg text-text-primary hover:bg-gray-100 rounded-lg">+</button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-text-secondary mb-2">{t('maxCookTime')}</label>
+              <div className="bg-surface border border-line-light rounded-xl p-2 px-3 flex flex-col justify-center h-[46px]">
+                <div className="flex justify-between text-xs text-text-secondary mb-1">
+                  <span>10m</span>
+                  <span className="font-bold text-brand-primary">{filters.maxCookTime}m</span>
+                  <span>120m</span>
+                </div>
+                <input
+                  type="range"
+                  min="10"
+                  max="120"
+                  step="5"
+                  value={filters.maxCookTime}
+                  onChange={(e) => setFilters({ ...filters, maxCookTime: parseInt(e.target.value, 10) })}
+                  className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand-primary"
+                />
+              </div>
+            </div>
+          </div>
         </div>
+
+        <button onClick={handleFetchRecipes} disabled={isLoading} className="w-full bg-brand-primary text-white font-bold py-4 px-4 rounded-xl shadow-lg disabled:opacity-50 hover:bg-brand-dark transition-colors mb-8 flex items-center justify-center gap-2">
+          <SparklesIcon className="w-5 h-5 text-white" />
+          <span>{isLoading ? t('loadingRecipes') : t('findRecipes')}</span>
+        </button>
 
         {isLoading && (
           <div className="py-8 px-4 text-center">
@@ -212,7 +283,7 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({ ingredien
         {error && <p className="text-red-500 text-center py-4 mt-4">{error}</p>}
 
         {!isLoading && progress === 100 && (
-          <div className="space-y-4">
+          <div className="space-y-4 pb-20">
             {recipes.map((recipe, index) => (
               <RecipeCard key={index} recipe={recipe} onSelect={() => handleRecipeSelect(recipe)} />
             ))}
@@ -228,14 +299,6 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({ ingredien
             isSaved={savedRecipes.some(r => r.recipeName === selectedRecipe.recipeName)}
             onToggleSaveRecipe={onToggleSaveRecipe}
             onStartChat={onStartChat}
-          />
-        )}
-
-        {isFilterModalOpen && (
-          <FilterModal
-            initialFilters={filters}
-            onApply={handleApplyFilters}
-            onClose={() => setIsFilterModalOpen(false)}
           />
         )}
       </div>

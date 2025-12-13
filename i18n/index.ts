@@ -34,7 +34,7 @@ export const translations = {
     // Settings
     settings: 'Settings',
     language: 'Language',
-    generateRecipe: 'Generate Recipe',
+    generateRecipe: 'Cook',
     selectIngredients: 'Select Ingredients',
     noIngredients: 'No ingredients found. Add some to your fridge!',
     done: 'Done',
@@ -112,7 +112,7 @@ export const translations = {
     addIngredientsFirst: 'Please add ingredients first.',
     noRecipesFound: 'No recipes found with the current filters. Try adjusting your search.',
     filterRecipes: 'Filter Recipes',
-    findRecipes: 'Find Recipes',
+    findRecipes: 'Generate Recipes',
     priorityIngredientsTitle: 'Priority Ingredients',
     priorityIngredientsSubtitle: 'Select ingredients you want to use up first.',
     loadingRecipes: 'AI chef is crafting your personalized recipes...',

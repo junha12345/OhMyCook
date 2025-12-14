@@ -64,6 +64,7 @@ const AppContent: React.FC = () => {
   const [navigationDirection, setNavigationDirection] = useState<'left' | 'right' | 'fade'>('left');
   const [chatContext, setChatContext] = useState<Recipe | null>(null);
   const [chatHistories, setChatHistories] = useLocalStorage<Record<string, ChatMessage[]>>(`ohmycook-chatHistories-${userStorageSuffix}`, {});
+  const [currentChatKey, setCurrentChatKey] = useState<string>('__general__');
   const [chatOpenedFromRecipe, setChatOpenedFromRecipe] = useState<Recipe | null>(null);
   const [openedRecipeModal, setOpenedRecipeModal] = useState<Recipe | null>(null);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
@@ -91,7 +92,9 @@ const AppContent: React.FC = () => {
   };
 
   const handleStartChat = (recipe: Recipe) => {
+    const recipeKey = recipe.recipeName;
     setChatContext(recipe);
+    setCurrentChatKey(recipeKey);
     setChatOpenedFromRecipe(recipe);
     setOpenedRecipeModal(recipe); // Remember which modal was open
     handleNavigate('chat');
@@ -107,8 +110,7 @@ const AppContent: React.FC = () => {
   const handleChatBack = () => {
     setNavigationDirection('right');
     setCurrentView(previousView);
-    // Keep openedRecipeModal so RecipeRecommendations can reopen it
-    // Clear chatOpenedFromRecipe after navigating back
+    setCurrentChatKey('__general__');
     setChatOpenedFromRecipe(null);
   };
 
@@ -215,6 +217,23 @@ const AppContent: React.FC = () => {
             onBack={() => { }} // Tab view, no back action
             showBack={false}
             recipeContext={null} // General chat
+            initialMessages={chatHistories['__general__'] || []}
+            onMessagesUpdate={(messages) => handleChatMessagesUpdate('__general__', messages)}
+            allChatHistories={chatHistories}
+            onLoadHistory={(key) => {
+              const isRecipe = key !== '__general__';
+              if (isRecipe) {
+                const recipe = cachedRecipes.find(r => r.recipeName === key) || savedRecipes.find(r => r.recipeName === key);
+                if (recipe) {
+                  setChatContext(recipe);
+                  setCurrentChatKey(key);
+                  handleNavigate('chat');
+                }
+              } else {
+                setChatContext(null);
+                setCurrentChatKey('__general__');
+              }
+            }}
           />
         );
       case 'popular':
@@ -303,15 +322,14 @@ const AppContent: React.FC = () => {
               );
 
             case 'chat':
-              const recipeKey = chatContext?.recipeName || '__general__';
               return (
                 <PageTransition key="chat" direction={navigationDirection}>
                   <AIChef
                     settings={settings}
                     onBack={handleChatBack}
                     recipeContext={chatContext}
-                    initialMessages={chatHistories[recipeKey] || []}
-                    onMessagesUpdate={(messages) => handleChatMessagesUpdate(recipeKey, messages)}
+                    initialMessages={chatHistories[currentChatKey] || []}
+                    onMessagesUpdate={(messages) => handleChatMessagesUpdate(currentChatKey, messages)}
                     openedFromRecipe={chatOpenedFromRecipe}
                     onCloseRecipeContext={() => setChatOpenedFromRecipe(null)}
                     allChatHistories={chatHistories}
@@ -322,9 +340,13 @@ const AppContent: React.FC = () => {
                         const recipe = cachedRecipes.find(r => r.recipeName === key) || savedRecipes.find(r => r.recipeName === key);
                         if (recipe) {
                           setChatContext(recipe);
+                          setCurrentChatKey(key);
+                          setChatOpenedFromRecipe(null);
                         }
                       } else {
                         setChatContext(null);
+                        setCurrentChatKey(key);
+                        setChatOpenedFromRecipe(null);
                       }
                     }}
                   />

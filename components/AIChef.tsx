@@ -72,7 +72,7 @@ const AIChef: React.FC<AIChefProps> = ({
 
   useEffect(() => {
     setMessages(initialMessages);
-  }, [initialMessages]);
+  }, [initialMessages, recipeContext]);
 
   // Sync messages to parent when they change (auto-save)
   useEffect(() => {
@@ -114,22 +114,39 @@ const AIChef: React.FC<AIChefProps> = ({
     console.log('Sending message:', textToSend);
     console.log('History length:', messages.length);
 
-    const history = messages.map(msg => ({
+    const history = updatedMessages.map(msg => ({
       role: msg.role,
       parts: msg.parts.map(p => ({ text: p.text }))
     }));
 
     try {
       const { chatWithAIChef } = await import('../services/geminiService');
-      console.log('Calling AI Chef API...');
+      console.log('=== AI Chef Request Start ===');
+      console.log('Recipe context:', recipeContext?.recipeName);
+      console.log('Language:', language);
+      console.log('History length:', history.length);
+      console.log('User message:', textToSend);
+      console.log('Calling AI Chef API with history:', history);
+      
       const responseText = await chatWithAIChef(history, textToSend, settings, language, recipeContext);
-      console.log('AI Response:', responseText);
+      console.log('=== AI Chef Response ===');
+      console.log('Response:', responseText);
+      
       const modelMessage: ChatMessage = { role: 'model', parts: [{ text: responseText }] };
       setMessages(prev => [...prev, modelMessage]);
       setShowSuggestedQuestions(true);
+      console.log('=== AI Chef Request End ===');
     } catch (err) {
-      console.error('AI Chef Error:', err);
-      setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+      console.error('=== AI Chef Error ===');
+      console.error('Error details:', err);
+      if (err instanceof Error) {
+        console.error('Error message:', err.message);
+        console.error('Error stack:', err.stack);
+        setError(err.message);
+      } else {
+        console.error('Unknown error type:', err);
+        setError('An unknown error occurred.');
+      }
       setShowSuggestedQuestions(true);
     } finally {
       setIsLoading(false);

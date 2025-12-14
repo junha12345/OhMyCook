@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { UserSettings, Ingredient, ShoppingListItem, Recipe, User, ChatMessage } from './types';
 import IngredientManager from './components/IngredientManager';
@@ -14,6 +15,7 @@ import Auth from './components/Auth';
 import LandingPage from './components/LandingPage';
 import BottomNavigation from './components/BottomNavigation';
 import Profile from './components/Profile';
+import PageTransition from './components/PageTransition';
 
 const defaultSettings: UserSettings = {
   cookingLevel: 'Beginner',
@@ -40,6 +42,7 @@ const AppContent: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('tab');
   const [currentTab, setCurrentTab] = useState<Tab>('cook');
   const [previousView, setPreviousView] = useState<View>('tab');
+  const [navigationDirection, setNavigationDirection] = useState<'left' | 'right'>('left');
   const [chatContext, setChatContext] = useState<Recipe | null>(null);
   const [chatHistories, setChatHistories] = useState<Record<string, ChatMessage[]>>({});
   const [chatOpenedFromRecipe, setChatOpenedFromRecipe] = useState<Recipe | null>(null);
@@ -60,8 +63,9 @@ const AppContent: React.FC = () => {
     document.title = t('appTitle');
   }, [language, t]);
 
-  const handleNavigate = (view: View) => {
+  const handleNavigate = (view: View, isBack: boolean = false) => {
     setPreviousView(currentView);
+    setNavigationDirection(isBack ? 'right' : 'left');
     setCurrentView(view);
   };
 
@@ -85,6 +89,7 @@ const AppContent: React.FC = () => {
   };
 
   const handleChatBack = () => {
+    setNavigationDirection('right');
     setCurrentView(previousView);
     // Keep openedRecipeModal so RecipeRecommendations can reopen it
     // Clear chatOpenedFromRecipe after navigating back
@@ -225,65 +230,93 @@ const AppContent: React.FC = () => {
       );
     }
 
-    switch (currentView) {
-      case 'auth':
-        return <Auth onLogin={handleLogin} onSignup={handleSignup} users={users} onBack={() => { setCurrentView('tab'); setCurrentTab('cook'); }} initialMode={authMode} />;
-      case 'onboarding':
-        return <Onboarding initialSettings={settings} onSave={handleSaveSettings} onBack={() => { setCurrentView(currentUser ? 'tab' : 'auth'); }} />;
+    return (
+      <AnimatePresence mode="wait" custom={navigationDirection}>
+        {(() => {
+          switch (currentView) {
+            case 'auth':
+              return (
+                <PageTransition key="auth" direction={navigationDirection}>
+                  <Auth onLogin={handleLogin} onSignup={handleSignup} users={users} onBack={() => { setNavigationDirection('right'); setCurrentView('tab'); setCurrentTab('cook'); }} initialMode={authMode} />
+                </PageTransition>
+              );
+            case 'onboarding':
+              return (
+                <PageTransition key="onboarding" direction={navigationDirection}>
+                  <Onboarding initialSettings={settings} onSave={handleSaveSettings} onBack={() => { setNavigationDirection('right'); setCurrentView(currentUser ? 'tab' : 'auth'); }} />
+                </PageTransition>
+              );
 
-      case 'recommendations':
-        return <RecipeRecommendations
-          ingredients={ingredients}
-          onBack={() => { setCurrentView('tab'); setCurrentTab('cook'); setOpenedRecipeModal(null); }}
-          shoppingList={shoppingList}
-          onToggleShoppingListItem={handleToggleShoppingListItem}
-          savedRecipes={savedRecipes}
-          onToggleSaveRecipe={handleToggleSaveRecipe}
-          onStartChat={handleStartChat}
-          initialOpenedRecipe={openedRecipeModal}
-          onRecipeModalChange={setOpenedRecipeModal}
-        />;
+            case 'recommendations':
+              return (
+                <PageTransition key="recommendations" direction={navigationDirection}>
+                  <RecipeRecommendations
+                    ingredients={ingredients}
+                    onBack={() => { setNavigationDirection('right'); setCurrentView('tab'); setCurrentTab('cook'); setOpenedRecipeModal(null); }}
+                    shoppingList={shoppingList}
+                    onToggleShoppingListItem={handleToggleShoppingListItem}
+                    savedRecipes={savedRecipes}
+                    onToggleSaveRecipe={handleToggleSaveRecipe}
+                    onStartChat={handleStartChat}
+                    initialOpenedRecipe={openedRecipeModal}
+                    onRecipeModalChange={setOpenedRecipeModal}
+                  />
+                </PageTransition>
+              );
 
-      case 'chat':
-        const recipeKey = chatContext?.recipeName || '__general__';
-        return <AIChef
-          settings={settings}
-          onBack={handleChatBack}
-          recipeContext={chatContext}
-          initialMessages={chatHistories[recipeKey] || []}
-          onMessagesUpdate={(messages) => handleChatMessagesUpdate(recipeKey, messages)}
-          openedFromRecipe={chatOpenedFromRecipe}
-          onCloseRecipeContext={() => setChatOpenedFromRecipe(null)}
-        />;
+            case 'chat':
+              const recipeKey = chatContext?.recipeName || '__general__';
+              return (
+                <PageTransition key="chat" direction={navigationDirection}>
+                  <AIChef
+                    settings={settings}
+                    onBack={handleChatBack}
+                    recipeContext={chatContext}
+                    initialMessages={chatHistories[recipeKey] || []}
+                    onMessagesUpdate={(messages) => handleChatMessagesUpdate(recipeKey, messages)}
+                    openedFromRecipe={chatOpenedFromRecipe}
+                    onCloseRecipeContext={() => setChatOpenedFromRecipe(null)}
+                  />
+                </PageTransition>
+              );
 
-      case 'shoppingList':
-        return <ShoppingList shoppingList={shoppingList} setShoppingList={setShoppingList} onBack={() => { setCurrentView('tab'); setCurrentTab('profile'); }} />;
+            case 'shoppingList':
+              return (
+                <PageTransition key="shoppingList" direction={navigationDirection}>
+                  <ShoppingList shoppingList={shoppingList} setShoppingList={setShoppingList} onBack={() => { setNavigationDirection('right'); setCurrentView('tab'); setCurrentTab('profile'); }} />
+                </PageTransition>
+              );
 
-      case 'savedRecipes':
-        return <SavedRecipes
-          savedRecipes={savedRecipes}
-          onBack={() => { setCurrentView('tab'); setCurrentTab('profile'); }}
-          shoppingList={shoppingList}
-          onToggleShoppingListItem={handleToggleShoppingListItem}
-          onToggleSaveRecipe={handleToggleSaveRecipe}
-          onStartChat={handleStartChat}
-        />;
+            case 'savedRecipes':
+              return (
+                <PageTransition key="savedRecipes" direction={navigationDirection}>
+                  <SavedRecipes
+                    savedRecipes={savedRecipes}
+                    onBack={() => { setNavigationDirection('right'); setCurrentView('tab'); setCurrentTab('profile'); }}
+                    shoppingList={shoppingList}
+                    onToggleShoppingListItem={handleToggleShoppingListItem}
+                    onToggleSaveRecipe={handleToggleSaveRecipe}
+                    onStartChat={handleStartChat}
+                  />
+                </PageTransition>
+              );
 
-      case 'tab':
-      default:
-        return (
-          <>
-            <div className="pb-20">
-              {renderTab()}
-            </div>
-            <BottomNavigation currentTab={currentTab} onTabChange={handleTabChange} />
-          </>
-        );
-    }
+            case 'tab':
+            default:
+              return (
+                <div key="tab" className="h-full">
+                  {renderTab()}
+                  <BottomNavigation currentTab={currentTab} onTabChange={handleTabChange} />
+                </div>
+              );
+          }
+        })()}
+      </AnimatePresence>
+    );
   };
 
   return (
-    <div className="min-h-screen bg-background text-text-primary font-sans transition-colors duration-300 max-w-lg mx-auto relative shadow-2xl">
+    <div className="h-[100dvh] overflow-hidden bg-background text-text-primary font-sans transition-colors duration-300 max-w-lg mx-auto relative shadow-2xl">
       {renderView()}
     </div>
   );

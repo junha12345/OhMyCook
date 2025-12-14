@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { Recipe, Ingredient, RecipeFilters, ShoppingListItem } from '../types';
 import RecipeCard, { RecipeDetailModal } from './RecipeCard';
 import { Spinner, ProgressBar } from './Spinner';
@@ -264,17 +265,20 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({
           </div>
         )}
 
-        {selectedRecipe && (
-          <RecipeDetailModal
-            recipe={selectedRecipe}
-            onClose={() => { setSelectedRecipe(null); onRecipeModalChange?.(null); }}
-            shoppingList={shoppingList}
-            onToggleShoppingListItem={onToggleShoppingListItem}
-            isSaved={savedRecipes.some(r => r.recipeName === selectedRecipe.recipeName)}
-            onToggleSaveRecipe={onToggleSaveRecipe}
-            onStartChat={onStartChat}
-          />
-        )}
+        <AnimatePresence>
+          {selectedRecipe && (
+            <RecipeDetailModal
+              recipe={selectedRecipe}
+              onClose={() => { setSelectedRecipe(null); onRecipeModalChange?.(null); }}
+              shoppingList={shoppingList}
+              onToggleShoppingListItem={onToggleShoppingListItem}
+              isSaved={savedRecipes.some(r => r.recipeName === selectedRecipe.recipeName)}
+              onToggleSaveRecipe={onToggleSaveRecipe}
+              onStartChat={onStartChat}
+              key="recipe-detail-modal"
+            />
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

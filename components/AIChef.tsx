@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { UserSettings, ChatMessage, Recipe } from '../types';
 import { SendIcon, LogoIcon } from './icons';
 import Spinner from './Spinner';
@@ -109,11 +110,17 @@ const AIChef: React.FC<AIChefProps> = ({
         </div>
 
         {messages.map((msg, index) => (
-          <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.3 }}
+            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
             <div className={`max-w-xs md:max-w-md lg:max-w-lg px-4 py-3 rounded-xl ${msg.role === 'user' ? 'bg-brand-primary text-white rounded-br-none' : 'bg-surface text-text-primary rounded-bl-none shadow-subtle'}`}>
               <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.parts[0].text}</p>
             </div>
-          </div>
+          </motion.div>
         ))}
 
         {isLoading && (
@@ -150,9 +157,15 @@ const AIChef: React.FC<AIChefProps> = ({
             disabled={isLoading}
             className="flex-grow p-3 border border-line-light rounded-xl bg-surface focus:outline-none focus:ring-2 focus:ring-brand-primary/50 disabled:opacity-50"
           />
-          <button onClick={() => handleSend()} disabled={isLoading || !input.trim()} className="bg-text-secondary hover:bg-text-primary text-white p-3 rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center aspect-square">
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            whileHover={{ scale: 1.05 }}
+            onClick={() => handleSend()}
+            disabled={isLoading || !input.trim()}
+            className="bg-text-secondary hover:bg-text-primary text-white p-3 rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center aspect-square"
+          >
             <SendIcon className="w-5 h-5" />
-          </button>
+          </motion.button>
         </div>
       </div>
     </div>

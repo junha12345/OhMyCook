@@ -35,7 +35,7 @@ const Profile: React.FC<ProfileProps> = ({ user, settings, onLogout, onNavigate,
     }
 
     return (
-        <div className="flex flex-col h-full bg-background pb-20">
+        <div className="flex flex-col h-full bg-background pb-24">
             <MainHeader />
 
             <div className="p-6 space-y-6 overflow-y-auto">

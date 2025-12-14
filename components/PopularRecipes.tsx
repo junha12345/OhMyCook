@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '../context/LanguageContext';
 import MainHeader from './MainHeader';
 import { Recipe, ShoppingListItem } from '../types';
@@ -62,14 +63,56 @@ const PopularRecipes: React.FC<PopularRecipesProps> = ({
       <MainHeader />
 
       <div className="p-4 flex-shrink-0">
-        <div className="flex bg-surface p-1 rounded-xl border border-line-light">
-          <button onClick={() => setActiveTab('today')} className={`flex-1 py-2 text-sm font-bold rounded-lg ${activeTab === 'today' ? 'bg-brand-primary text-white' : 'text-text-secondary'}`}>{t('today')}</button>
-          <button onClick={() => setActiveTab('thisWeek')} className={`flex-1 py-2 text-sm font-bold rounded-lg ${activeTab === 'thisWeek' ? 'bg-brand-primary text-white' : 'text-text-secondary'}`}>{t('thisWeek')}</button>
-          <button onClick={() => setActiveTab('thisMonth')} className={`flex-1 py-2 text-sm font-bold rounded-lg ${activeTab === 'thisMonth' ? 'bg-brand-primary text-white' : 'text-text-secondary'}`}>{t('thisMonth')}</button>
+        <div className="relative flex bg-surface p-1 rounded-xl border border-line-light">
+          {/* Tab buttons with individual animated indicators */}
+          <button
+            onClick={() => setActiveTab('today')}
+            className="relative z-10 flex-1 py-2 text-sm font-bold rounded-lg transition-colors"
+          >
+            <motion.div
+              className="absolute inset-0 bg-brand-primary rounded-lg"
+              initial={false}
+              animate={{ opacity: activeTab === 'today' ? 1 : 0 }}
+              transition={{ duration: 0.2 }}
+            />
+            <span className={`relative z-10 ${activeTab === 'today' ? 'text-white' : 'text-text-secondary'}`}>
+              {t('today')}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('thisWeek')}
+            className="relative z-10 flex-1 py-2 text-sm font-bold rounded-lg transition-colors"
+          >
+            <motion.div
+              className="absolute inset-0 bg-brand-primary rounded-lg"
+              initial={false}
+              animate={{ opacity: activeTab === 'thisWeek' ? 1 : 0 }}
+              transition={{ duration: 0.2 }}
+            />
+            <span className={`relative z-10 ${activeTab === 'thisWeek' ? 'text-white' : 'text-text-secondary'}`}>
+              {t('thisWeek')}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('thisMonth')}
+            className="relative z-10 flex-1 py-2 text-sm font-bold rounded-lg transition-colors"
+          >
+            <motion.div
+              className="absolute inset-0 bg-brand-primary rounded-lg"
+              initial={false}
+              animate={{ opacity: activeTab === 'thisMonth' ? 1 : 0 }}
+              transition={{ duration: 0.2 }}
+            />
+            <span className={`relative z-10 ${activeTab === 'thisMonth' ? 'text-white' : 'text-text-secondary'}`}>
+              {t('thisMonth')}
+            </span>
+          </button>
         </div>
       </div>
 
-      <div className="flex-grow p-4 pt-0 overflow-y-auto">
+      <div className="flex-grow p-4 pt-0 overflow-y-auto pb-24">
         <div className="bg-brand-primary/10 text-brand-dark p-6 rounded-2xl mb-6">
           <h2 className="text-xl font-bold mb-2">{t('popularBannerTitle')}</h2>
           <p className="text-sm">{t('popularBannerSubtitle')}</p>
@@ -100,17 +143,20 @@ const PopularRecipes: React.FC<PopularRecipesProps> = ({
 
       </div>
 
-      {selectedRecipe && (
-        <RecipeDetailModal
-          recipe={selectedRecipe}
-          onClose={handleCloseModal}
-          shoppingList={shoppingList}
-          onToggleShoppingListItem={onToggleShoppingListItem}
-          isSaved={savedRecipes.some(r => r.recipeName === selectedRecipe.recipeName)}
-          onToggleSaveRecipe={onToggleSaveRecipe}
-          onStartChat={onStartChat}
-        />
-      )}
+      <AnimatePresence>
+        {selectedRecipe && (
+          <RecipeDetailModal
+            recipe={selectedRecipe}
+            onClose={handleCloseModal}
+            shoppingList={shoppingList}
+            onToggleShoppingListItem={onToggleShoppingListItem}
+            isSaved={savedRecipes.some(r => r.recipeName === selectedRecipe.recipeName)}
+            onToggleSaveRecipe={onToggleSaveRecipe}
+            onStartChat={onStartChat}
+            key="recipe-modal"
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

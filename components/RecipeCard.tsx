@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Recipe, ShoppingListItem } from '../types';
 import { ClockIcon, FireIcon, XIcon, BookmarkIcon, ChatBubbleIcon, CheckCircleIcon, CircleIcon } from './icons';
 import { useLanguage } from '../context/LanguageContext';
@@ -121,8 +122,19 @@ export const RecipeDetailModal: React.FC<{
     }
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4 font-sans animate-fade-in">
-            <div className="bg-surface rounded-2xl shadow-lg w-full max-w-lg max-h-[90vh] flex flex-col relative overflow-hidden">
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4 font-sans"
+        >
+            <motion.div
+                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                className="bg-surface rounded-2xl shadow-lg w-full max-w-lg max-h-[90vh] flex flex-col relative overflow-hidden"
+            >
                 <div className="overflow-y-auto flex-grow p-6 custom-scrollbar">
                     <div className="flex justify-between items-start">
                         <h2 className="text-2xl font-bold text-text-primary mb-4 pr-16">{recipe.recipeName}</h2>
@@ -241,8 +253,8 @@ export const RecipeDetailModal: React.FC<{
                 >
                     <ChatBubbleIcon className="w-6 h-6" />
                 </button>
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
     );
 };
 

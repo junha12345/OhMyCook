@@ -16,6 +16,7 @@ import LandingPage from './components/LandingPage';
 import BottomNavigation from './components/BottomNavigation';
 import Profile from './components/Profile';
 import PageTransition from './components/PageTransition';
+import { AuthSession, consumeSessionFromHash, ensureValidSession, signOut } from './services/supabaseAuth';
 
 const defaultSettings: UserSettings = {
   cookingLevel: 'Beginner',
@@ -36,6 +37,7 @@ type View = 'tab' | 'onboarding' | 'recommendations' | 'chat' | 'shoppingList' |
 const AppContent: React.FC = () => {
   const [users, setUsers] = useLocalStorage<User[]>('ohmycook-users', []);
   const [currentUser, setCurrentUser] = useLocalStorage<User | null>('ohmycook-currentUser', null);
+  const [authSession, setAuthSession] = useLocalStorage<AuthSession | null>('ohmycook-auth-session', null);
 
   const userStorageSuffix = currentUser?.email ?? 'guest';
 
@@ -67,6 +69,70 @@ const AppContent: React.FC = () => {
     document.documentElement.lang = language;
     document.title = t('appTitle');
   }, [language, t]);
+
+  useEffect(() => {
+    const syncSupabaseSession = async () => {
+      const sessionFromHash = await consumeSessionFromHash();
+      if (sessionFromHash) {
+        setAuthSession(sessionFromHash);
+        const mappedUser = mapSupabaseUserToLocal(sessionFromHash);
+        if (mappedUser) {
+          upsertUser(mappedUser);
+          setCurrentUser(mappedUser);
+        }
+        return;
+      }
+
+      const validSession = await ensureValidSession(authSession);
+      if (validSession) {
+        if (validSession !== authSession) {
+          setAuthSession(validSession);
+        }
+        const mappedUser = mapSupabaseUserToLocal(validSession);
+        if (mappedUser) {
+          upsertUser(mappedUser);
+          setCurrentUser(mappedUser);
+        }
+      } else if (authSession) {
+        setAuthSession(null);
+        setCurrentUser((prev) => (prev?.authProvider === 'google' ? null : prev));
+      }
+    };
+
+    syncSupabaseSession();
+  }, [authSession, users]);
+
+  const upsertUser = (user: User) => {
+    setUsers((prev) => {
+      const existing = prev.find((u) => u.email === user.email);
+      if (existing) {
+        return prev.map((u) =>
+          u.email === user.email
+            ? {
+                ...existing,
+                ...user,
+                hasCompletedOnboarding:
+                  user.hasCompletedOnboarding ?? existing.hasCompletedOnboarding,
+              }
+            : u,
+        );
+      }
+      return [...prev, user];
+    });
+  };
+
+  const mapSupabaseUserToLocal = (session: AuthSession | null): User | null => {
+    if (!session?.user?.email) return null;
+    const existing = users.find((u) => u.email === session.user?.email);
+    return {
+      id: session.user.id,
+      email: session.user.email,
+      authProvider: session.user.provider ?? 'google',
+      hasCompletedOnboarding: existing?.hasCompletedOnboarding ?? false,
+      displayName: existing?.displayName ?? session.user.email.split('@')[0],
+      password: existing?.password,
+    };
+  };
 
   const handleNavigate = (view: View, isBack: boolean = false) => {
     setPreviousView(currentView);
@@ -115,13 +181,9 @@ const AppContent: React.FC = () => {
 
     // Mark onboarding as complete for the current user
     if (currentUser && !currentUser.hasCompletedOnboarding) {
-      const updatedUsers = users.map(user =>
-        user.email === currentUser.email
-          ? { ...user, hasCompletedOnboarding: true }
-          : user
-      );
-      setUsers(updatedUsers);
-      setCurrentUser(prevUser => (prevUser ? { ...prevUser, hasCompletedOnboarding: true } : null));
+      const updatedUser = { ...currentUser, hasCompletedOnboarding: true };
+      upsertUser(updatedUser);
+      setCurrentUser(updatedUser);
     }
 
     setCurrentView('tab');
@@ -151,7 +213,9 @@ const AppContent: React.FC = () => {
   };
 
   const handleLogin = (user: User) => {
-    setCurrentUser(user);
+    const hydratedUser = { ...user, authProvider: user.authProvider ?? 'local' };
+    upsertUser(hydratedUser);
+    setCurrentUser(hydratedUser);
     if (user.hasCompletedOnboarding) {
       setCurrentView('tab');
       setCurrentTab('cook');
@@ -161,11 +225,15 @@ const AppContent: React.FC = () => {
   };
 
   const handleSignup = (newUser: Pick<User, 'email' | 'password'>) => {
-    setUsers(prev => [...prev, { ...newUser, hasCompletedOnboarding: false }]);
+    upsertUser({ ...newUser, hasCompletedOnboarding: false, authProvider: 'local' });
     setCurrentView('auth');
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (authSession?.accessToken) {
+      await signOut(authSession.accessToken);
+    }
+    setAuthSession(null);
     setCurrentUser(null);
     setCurrentView('tab');
     setCurrentTab('cook'); // Or stay on profile? Better to go to home/auth.

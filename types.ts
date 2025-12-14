@@ -74,8 +74,11 @@ export interface ShoppingListItem {
 }
 
 export interface User {
+  id?: string;
   email: string;
-  password: string;
+  password?: string;
+  displayName?: string;
+  authProvider?: 'local' | 'google' | string;
   hasCompletedOnboarding: boolean;
 }
 

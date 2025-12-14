@@ -241,6 +241,8 @@ export const translations = {
     switchToLogin: 'Already have an account? Login',
     welcomeUser: 'Welcome, {{email}}!',
     backToHome: 'Back to Home',
+    continueWithGoogle: 'Continue with Google',
+    googleAuthNote: 'We will redirect you to Google to sign in securely.',
   },
   ko: {
     // App
@@ -483,5 +485,7 @@ export const translations = {
     switchToLogin: '이미 계정이 있으신가요? 로그인',
     welcomeUser: '환영합니다, {{email}}님!',
     backToHome: '홈으로 돌아가기',
+    continueWithGoogle: 'Google로 계속하기',
+    googleAuthNote: 'Google로 이동하여 안전하게 로그인합니다.',
   },
 };

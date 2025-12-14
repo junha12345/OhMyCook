@@ -322,16 +322,14 @@ const Community: React.FC<CommunityProps> = ({
                       </button>
                     </div>
                   )}
+                  )}
                 </div>
-              )
-            }
-                </div>
-        );
+              );
             })}
-      </div>
+          </div>
         )}
+      </div>
     </div>
-    </div >
   );
 };
 

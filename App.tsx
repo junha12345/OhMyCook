@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { UserSettings, Ingredient, ShoppingListItem, Recipe, User, ChatMessage } from './types';
+import { UserSettings, Ingredient, ShoppingListItem, Recipe, User, ChatMessage, CommunityPost } from './types';
 import IngredientManager from './components/IngredientManager';
 import RecipeRecommendations from './components/RecipeRecommendations';
 import AIChef from './components/AIChef';
-import PopularRecipes from './components/PopularRecipes';
+import Community from './components/Community';
 import Onboarding from './components/Onboarding';
 import ShoppingList from './components/ShoppingList';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
@@ -29,7 +29,7 @@ const defaultSettings: UserSettings = {
   profileImage: '',
 };
 
-type Tab = 'cook' | 'chat' | 'popular' | 'profile';
+type Tab = 'cook' | 'chat' | 'community' | 'profile';
 type View = 'tab' | 'onboarding' | 'recommendations' | 'chat' | 'shoppingList' | 'savedRecipes' | 'auth';
 
 // Main App Content Component
@@ -43,6 +43,7 @@ const AppContent: React.FC = () => {
   const [ingredients, setIngredients] = useLocalStorage<Ingredient[]>(`ohmycook-ingredients-${userStorageSuffix}`, []);
   const [shoppingList, setShoppingList] = useLocalStorage<ShoppingListItem[]>(`ohmycook-shoppinglist-${userStorageSuffix}`, []);
   const [savedRecipes, setSavedRecipes] = useLocalStorage<Recipe[]>(`ohmycook-savedrecipes-${userStorageSuffix}`, []);
+  const [communityPosts, setCommunityPosts] = useLocalStorage<CommunityPost[]>('ohmycook-community-posts', []);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Navigation State
@@ -173,6 +174,58 @@ const AppContent: React.FC = () => {
     // Actually, LandingPage is shown if !currentUser.
   };
 
+  const handleCreateCommunityPost = (recipe: Recipe, note?: string) => {
+    if (!currentUser) return;
+
+    const displayName = settings.nickname || currentUser.email.split('@')[0];
+    const newPost: CommunityPost = {
+      id: `post-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      authorEmail: currentUser.email,
+      authorName: displayName,
+      recipe,
+      note,
+      createdAt: new Date().toISOString(),
+      likes: [],
+      comments: [],
+    };
+
+    setCommunityPosts((prev) => [newPost, ...prev]);
+  };
+
+  const handleToggleCommunityLike = (postId: string) => {
+    if (!currentUser) return;
+    setCommunityPosts((prev) =>
+      prev.map((post) => {
+        if (post.id !== postId) return post;
+        const hasLiked = post.likes.includes(currentUser.email);
+        return {
+          ...post,
+          likes: hasLiked
+            ? post.likes.filter((email) => email !== currentUser.email)
+            : [...post.likes, currentUser.email],
+        };
+      })
+    );
+  };
+
+  const handleAddCommunityComment = (postId: string, content: string) => {
+    if (!currentUser || !content.trim()) return;
+    const displayName = settings.nickname || currentUser.email.split('@')[0];
+    const newComment = {
+      id: `comment-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      authorEmail: currentUser.email,
+      authorName: displayName,
+      content,
+      createdAt: new Date().toISOString(),
+    };
+
+    setCommunityPosts((prev) =>
+      prev.map((post) =>
+        post.id === postId ? { ...post, comments: [...post.comments, newComment] } : post
+      )
+    );
+  };
+
   const renderTab = () => {
     switch (currentTab) {
       case 'cook':
@@ -193,17 +246,15 @@ const AppContent: React.FC = () => {
             recipeContext={null} // General chat
           />
         );
-      case 'popular':
+      case 'community':
         return (
-          <PopularRecipes
-            onBack={() => { }} // No back needed for main tab
-            shoppingList={shoppingList}
-            onToggleShoppingListItem={handleToggleShoppingListItem}
+          <Community
+            currentUser={currentUser}
             savedRecipes={savedRecipes}
-            onToggleSaveRecipe={handleToggleSaveRecipe}
-            onStartChat={handleStartChat}
-            initialOpenedRecipe={openedRecipeModal}
-            onRecipeModalChange={setOpenedRecipeModal}
+            posts={communityPosts}
+            onCreatePost={handleCreateCommunityPost}
+            onToggleLike={handleToggleCommunityLike}
+            onAddComment={handleAddCommunityComment}
           />
         );
       case 'profile':

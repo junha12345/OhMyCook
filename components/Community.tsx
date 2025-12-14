@@ -304,24 +304,26 @@ const Community: React.FC<CommunityProps> = ({
                           </div>
                         )}
                       </div>
-                    </div>
-                      
+
+
                       {currentUser && currentUser.id === post.authorId && (
-                    <div className="flex justify-end mt-4 pt-4 border-t border-line-light">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (confirm(t('confirmDeletePost') || "Delete this post?")) {
-                            onDeletePost(post.id);
-                          }
-                        }}
-                        className="text-xs text-red-500 hover:text-red-700 font-semibold flex items-center gap-1"
-                      >
-                        <XIcon className="w-4 h-4" />
-                        <span>{t('deletePost') || "Delete Post"}</span>
-                      </button>
+                        <div className="flex justify-end mt-4 pt-4 border-t border-line-light">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm(t('confirmDeletePost') || "Delete this post?")) {
+                                onDeletePost(post.id);
+                              }
+                            }}
+                            className="text-xs text-red-500 hover:text-red-700 font-semibold flex items-center gap-1"
+                          >
+                            <XIcon className="w-4 h-4" />
+                            <span>{t('deletePost') || "Delete Post"}</span>
+                          </button>
+                        </div>
+                      )}
+
                     </div>
-                  )}
                   )}
                 </div>
               );

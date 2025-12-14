@@ -1,11 +1,16 @@
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const authUrl = supabaseUrl && supabaseAnonKey ? `${supabaseUrl}/auth/v1` : null;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
-}
-
-const authUrl = `${supabaseUrl}/auth/v1`;
+const ensureConfigured = () => {
+  if (!authUrl || !supabaseAnonKey) {
+    console.warn(
+      'Supabase environment variables are missing. Google sign-in will be disabled until VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are configured.',
+    );
+    return false;
+  }
+  return true;
+};
 
 export interface SupabaseUserInfo {
   id: string;
@@ -33,6 +38,8 @@ function parseHashFragment(fragment: string): Record<string, string> {
 }
 
 async function fetchSupabaseUser(accessToken: string): Promise<SupabaseUserInfo | null> {
+  if (!ensureConfigured()) return null;
+
   const response = await fetch(`${authUrl}/user`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -51,6 +58,8 @@ async function fetchSupabaseUser(accessToken: string): Promise<SupabaseUserInfo 
 }
 
 export async function consumeSessionFromHash(): Promise<AuthSession | null> {
+  if (!ensureConfigured()) return null;
+
   if (!window?.location?.hash) return null;
   const params = parseHashFragment(window.location.hash);
   const accessToken = params.access_token;
@@ -85,6 +94,8 @@ export async function ensureValidSession(existing: AuthSession | null): Promise<
 }
 
 export async function refreshSession(refreshToken: string): Promise<AuthSession | null> {
+  if (!ensureConfigured()) return null;
+
   const response = await fetch(`${authUrl}/token?grant_type=refresh_token`, {
     method: 'POST',
     headers: {
@@ -108,12 +119,16 @@ export async function refreshSession(refreshToken: string): Promise<AuthSession 
 }
 
 export function startGoogleSignIn(redirectTo?: string) {
+  if (!ensureConfigured()) return;
+
   const redirectUrl = redirectTo ?? window.location.href;
   const url = `${authUrl}/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`;
   window.location.href = url;
 }
 
 export async function signOut(accessToken?: string) {
+  if (!ensureConfigured()) return;
+
   if (!accessToken) return;
   await fetch(`${authUrl}/logout`, {
     method: 'POST',

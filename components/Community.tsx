@@ -237,22 +237,7 @@ const Community: React.FC<CommunityProps> = ({
                       className={`flex items-center gap-1 px-3 py-1 rounded-full border ${hasLiked ? 'bg-brand-primary text-white border-brand-primary' : 'border-line-light text-text-secondary'}`}
                     >
                       <HeartIcon className={`w-4 h-4 ${hasLiked ? 'fill-current' : ''}`} />
-                      <span className="text-sm font-semibold">{post.likes.length}</span>
-                      <span className="text-sm font-semibold">{post.likes.length}</span>
                     </button>
-                    {currentUser && currentUser.id === post.authorId && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (confirm(t('confirmDeletePost') || "Delete this post?")) {
-                            onDeletePost(post.id);
-                          }
-                        }}
-                        className="ml-2 p-2 text-text-secondary hover:text-red-500 transition-colors"
-                      >
-                        <XIcon className="w-4 h-4" />
-                      </button>
-                    )}
                   </div>
 
                   <button
@@ -320,14 +305,33 @@ const Community: React.FC<CommunityProps> = ({
                         )}
                       </div>
                     </div>
+                      
+                      {currentUser && currentUser.id === post.authorId && (
+                    <div className="flex justify-end mt-4 pt-4 border-t border-line-light">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(t('confirmDeletePost') || "Delete this post?")) {
+                            onDeletePost(post.id);
+                          }
+                        }}
+                        className="text-xs text-red-500 hover:text-red-700 font-semibold flex items-center gap-1"
+                      >
+                        <XIcon className="w-4 h-4" />
+                        <span>{t('deletePost') || "Delete Post"}</span>
+                      </button>
+                    </div>
                   )}
                 </div>
-              );
+              )
+            }
+                </div>
+        );
             })}
-          </div>
-        )}
       </div>
+        )}
     </div>
+    </div >
   );
 };
 

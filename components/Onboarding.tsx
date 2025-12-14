@@ -10,7 +10,10 @@ interface OnboardingProps {
   initialSettings: UserSettings;
   onSave: (settings: UserSettings, initialIngredients: string[]) => void;
   onBack: () => void;
-  skipIngredients?: boolean;
+  // skipIngredients prop is no longer needed since we are removing that section, but maybe keep for compatibility if used elsewhere? 
+  // User asked to remove it from landing page (last step), so effectively removing it from the component logic is best.
+  // Actually, let's keep the prop interface clean.
+  includeProfileStep?: boolean;
 }
 
 const ProgressBar: React.FC<{ step: number; totalSteps: number }> = ({ step, totalSteps }) => (
@@ -22,7 +25,7 @@ const ProgressBar: React.FC<{ step: number; totalSteps: number }> = ({ step, tot
   </div>
 );
 
-const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack, skipIngredients = false }) => {
+const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack, includeProfileStep = true }) => {
   const [step, setStep] = useState(1);
   const normalizeAllergies = (items: string[]) => items.map(a => findIngredientEnglishName(a) || a);
   const mergedSettings: UserSettings = {
@@ -34,7 +37,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack
   const [settings, setSettings] = useState<UserSettings>(mergedSettings);
   const [selectedInitialIngredients, setSelectedInitialIngredients] = useState<string[]>([]);
   const { t, language } = useLanguage();
-  const totalSteps = 6;
+  const totalSteps = includeProfileStep ? 6 : 5;
 
   const [customIngredientSearch, setCustomIngredientSearch] = useState('');
   const [searchSuggestions, setSearchSuggestions] = useState<(typeof ALL_INGREDIENTS[0])[]>([]);
@@ -311,7 +314,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack
             </div>
           </div>
         );
-      case 6: // Profile & Initial Ingredients
+      case 6: // Profile Setup Only (Ingredients removed)
+        if (!includeProfileStep) return null;
         return (
           <div className="flex flex-col h-full space-y-4">
             <div className="bg-surface border border-line-light rounded-2xl shadow-sm p-4">
@@ -354,102 +358,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack
                 </div>
               </div>
             </div>
-
-            <div className="flex flex-col h-full">
-              <div className="flex items-center justify-between mb-1">
-                <h2 className="text-xl font-bold">{t('ingredientManagerTitle')}</h2>
-                {skipIngredients && (
-                  <span className="text-xs font-semibold text-text-secondary bg-background border border-line-light rounded-full px-3 py-1">
-                    {t('ingredientsOptionalNote')}
-                  </span>
-                )}
-              </div>
-
-              {skipIngredients ? (
-                <div className="flex-grow flex items-center justify-center text-text-secondary bg-surface border border-line-light rounded-2xl mt-2 px-4 text-center leading-relaxed">
-                  <p className="text-sm">{t('ingredientsSkipDescription')}</p>
-                </div>
-              ) : (
-                <>
-                  <div className="p-4 pb-0 px-0">
-                    <div className="relative mb-4">
-                      <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary" />
-                      <input
-                        type="text"
-                        value={customIngredientSearch}
-                        onChange={handleCustomSearchChange}
-                        placeholder={t('searchIngredients')}
-                        className="w-full bg-surface border border-line-light rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
-                      />
-                      {searchSuggestions.length > 0 && (
-                        <ul className="absolute z-10 w-full mt-1 border border-line-light rounded-lg max-h-60 overflow-y-auto bg-surface shadow-lg">
-                          {INGREDIENT_CATEGORIES.map(category => {
-                            const categorySuggestions = searchSuggestions.filter(ing => getIngredientCategory(ing.en) === category);
-                            if (categorySuggestions.length === 0) return null;
-
-                            return (
-                              <React.Fragment key={category}>
-                                <li className="px-3 py-1 bg-brand-light/50 text-xs font-bold text-text-secondary uppercase">
-                                  {t(category as any)}
-                                </li>
-                                {categorySuggestions.map(ing => (
-                                  <li key={ing.en}>
-                                    <button onClick={() => handleSuggestionSelect(ing.en)} className="w-full text-left p-2 pl-4 text-sm text-text-primary hover:bg-brand-light flex items-center gap-2">
-                                      <span>{getIngredientEmoji(ing.en)}</span>
-                                      <span>{getIngredientTranslation(ing.en, language)}</span>
-                                    </button>
-                                  </li>
-                                ))}
-                              </React.Fragment>
-                            );
-                          })}
-                        </ul>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex-grow overflow-y-auto pr-2">
-                    {selectedInitialIngredients.length === 0 ? (
-                      <div className="text-center text-text-secondary mt-6">
-                        <span className="text-6xl block mb-3 grayscale opacity-50">🥗</span>
-                        <p className="text-base font-medium">{customIngredientSearch ? t('noSearchResults') : t('pleaseAddIngredients')}</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-6">
-                        {INGREDIENT_CATEGORIES.map(category => {
-                          const categoryIngredients = selectedInitialIngredients.filter(ing => getIngredientCategory(ing) === category);
-                          if (categoryIngredients.length === 0) return null;
-
-                          return (
-                            <div key={category}>
-                              <h3 className="text-sm font-bold text-text-secondary uppercase mb-3 ml-1">
-                                {t(category as any)}
-                              </h3>
-                              <div className="flex flex-wrap gap-2">
-                                {categoryIngredients.map(ing => (
-                                  <div key={ing} className="bg-surface border border-line-light rounded-full pl-3 pr-2 py-2 shadow-sm flex items-center gap-2 animate-fade-in">
-                                    <span className="text-lg leading-none">{getIngredientEmoji(ing)}</span>
-                                    <span className="font-semibold text-text-primary text-sm whitespace-nowrap">
-                                      {getIngredientTranslation(ing, language)}
-                                    </span>
-                                    <button
-                                      onClick={() => handleInitialIngredientToggle(ing)}
-                                      className="ml-1 p-1 text-text-secondary hover:text-red-500 rounded-full hover:bg-gray-100 transition-colors"
-                                    >
-                                      <XIcon className="w-4 h-4" />
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
+            {/* Ingredient Manager Section Removed as per request */}
           </div>
         )
       default:

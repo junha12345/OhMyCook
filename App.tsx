@@ -314,6 +314,19 @@ const AppContent: React.FC = () => {
                     onMessagesUpdate={(messages) => handleChatMessagesUpdate(recipeKey, messages)}
                     openedFromRecipe={chatOpenedFromRecipe}
                     onCloseRecipeContext={() => setChatOpenedFromRecipe(null)}
+                    allChatHistories={chatHistories}
+                    onLoadHistory={(key) => {
+                      const isRecipe = key !== '__general__';
+                      if (isRecipe) {
+                        // Find recipe in cached or saved recipes
+                        const recipe = cachedRecipes.find(r => r.recipeName === key) || savedRecipes.find(r => r.recipeName === key);
+                        if (recipe) {
+                          setChatContext(recipe);
+                        }
+                      } else {
+                        setChatContext(null);
+                      }
+                    }}
                   />
                 </PageTransition>
               );

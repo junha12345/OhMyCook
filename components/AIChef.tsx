@@ -7,6 +7,14 @@ import Spinner from './Spinner';
 import { useLanguage } from '../context/LanguageContext';
 import Header from './Header';
 
+interface ChatHistory {
+  key: string;
+  recipeName?: string;
+  summary: string;
+  timestamp: number;
+  messages: ChatMessage[];
+}
+
 interface AIChefProps {
   settings: UserSettings;
   onBack: () => void;
@@ -16,6 +24,8 @@ interface AIChefProps {
   onMessagesUpdate?: (messages: ChatMessage[]) => void;
   openedFromRecipe?: Recipe | null;
   onCloseRecipeContext?: () => void;
+  allChatHistories?: Record<string, ChatMessage[]>;
+  onLoadHistory?: (key: string) => void;
 }
 
 const AIChef: React.FC<AIChefProps> = ({
@@ -26,7 +36,9 @@ const AIChef: React.FC<AIChefProps> = ({
   initialMessages = [],
   onMessagesUpdate,
   openedFromRecipe,
-  onCloseRecipeContext
+  onCloseRecipeContext,
+  allChatHistories = {},
+  onLoadHistory
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [input, setInput] = useState('');
@@ -37,6 +49,23 @@ const AIChef: React.FC<AIChefProps> = ({
   const chatEndRef = useRef<HTMLDivElement>(null);
   const { t, language } = useLanguage();
 
+  // Build history list from all chat histories
+  const historyList: ChatHistory[] = Object.entries(allChatHistories)
+    .filter(([key, msgs]) => msgs.length > 0)
+    .map(([key, msgs]) => {
+      const isRecipe = key !== '__general__';
+      const firstUserMsg = msgs.find(m => m.role === 'user');
+      const summary = firstUserMsg?.parts[0]?.text.slice(0, 50) || t('chatHistory');
+      return {
+        key,
+        recipeName: isRecipe ? key : undefined,
+        summary,
+        timestamp: Date.now(),
+        messages: msgs
+      };
+    })
+    .sort((a, b) => b.timestamp - a.timestamp);
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -45,9 +74,9 @@ const AIChef: React.FC<AIChefProps> = ({
     setMessages(initialMessages);
   }, [initialMessages]);
 
-  // Sync messages to parent when they change
+  // Sync messages to parent when they change (auto-save)
   useEffect(() => {
-    if (onMessagesUpdate && messages.length > 0) {
+    if (onMessagesUpdate) {
       onMessagesUpdate(messages);
     }
   }, [messages, onMessagesUpdate]);
@@ -75,11 +104,15 @@ const AIChef: React.FC<AIChefProps> = ({
     if (!textToSend.trim() || isLoading) return;
 
     const userMessage: ChatMessage = { role: 'user', parts: [{ text: textToSend }] };
-    setMessages(prev => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     if (!messageText) setInput('');
     setIsLoading(true);
     setError(null);
     setShowSuggestedQuestions(false);
+
+    console.log('Sending message:', textToSend);
+    console.log('History length:', messages.length);
 
     const history = messages.map(msg => ({
       role: msg.role,
@@ -88,11 +121,14 @@ const AIChef: React.FC<AIChefProps> = ({
 
     try {
       const { chatWithAIChef } = await import('../services/geminiService');
+      console.log('Calling AI Chef API...');
       const responseText = await chatWithAIChef(history, textToSend, settings, language, recipeContext);
+      console.log('AI Response:', responseText);
       const modelMessage: ChatMessage = { role: 'model', parts: [{ text: responseText }] };
       setMessages(prev => [...prev, modelMessage]);
       setShowSuggestedQuestions(true);
     } catch (err) {
+      console.error('AI Chef Error:', err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred.');
       setShowSuggestedQuestions(true);
     } finally {
@@ -132,8 +168,42 @@ const AIChef: React.FC<AIChefProps> = ({
 
       <div className="flex-1 overflow-y-auto">
         <div className="p-4 space-y-4">
+          {/* History List View */}
+          {showHistory && historyList.length > 0 && (
+            <div className="mb-6 space-y-2">
+              <h3 className="text-sm font-bold text-text-primary mb-3">{t('chatHistoryList') || '대화 기록'}</h3>
+              {historyList.map(hist => (
+                <button
+                  key={hist.key}
+                  onClick={() => {
+                    setShowHistory(false);
+                    onLoadHistory?.(hist.key);
+                  }}
+                  className="w-full text-left bg-surface border border-line-light rounded-lg p-3 hover:bg-brand-light transition-colors"
+                >
+                  {hist.recipeName && (
+                    <div className="text-xs font-bold text-brand-primary mb-1">
+                      🍳 {hist.recipeName}
+                    </div>
+                  )}
+                  {!hist.recipeName && (
+                    <div className="text-xs font-bold text-text-secondary mb-1">
+                      💬 {t('generalChat') || '일반 대화'}
+                    </div>
+                  )}
+                  <div className="text-sm text-text-primary line-clamp-2">
+                    {hist.summary}...
+                  </div>
+                  <div className="text-xs text-text-secondary mt-1">
+                    {hist.messages.length} {t('messages') || 'messages'}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Suggested Questions - scrollable */}
-          {showSuggestedQuestions && messages.length > 0 && (
+          {!showHistory && showSuggestedQuestions && messages.length > 0 && (
             <div className="mb-4">
               <p className="text-sm text-text-secondary mb-2">{t('suggestedQuestions')}</p>
               <div className="flex flex-wrap gap-2">
@@ -150,8 +220,8 @@ const AIChef: React.FC<AIChefProps> = ({
             </div>
           )}
 
-          {/* Initial Greeting - only show if no chat history */}
-          {messages.length === 0 && (
+          {/* Initial Greeting - only show if no chat history and not showing history list */}
+          {!showHistory && messages.length === 0 && (
             <div className="flex justify-start">
               <div className="flex items-start gap-2 max-w-xs md:max-w-md">
                 <div className="w-8 h-8 rounded-full bg-brand-primary flex items-center justify-center flex-shrink-0">
@@ -169,7 +239,7 @@ const AIChef: React.FC<AIChefProps> = ({
           )}
 
           {/* Suggested Questions for first time users - scrollable */}
-          {messages.length === 0 && (
+          {!showHistory && messages.length === 0 && (
             <div className="mb-4">
               <p className="text-sm text-text-secondary mb-2">{t('suggestedQuestions')}</p>
               <div className="flex flex-wrap gap-2">
@@ -186,8 +256,8 @@ const AIChef: React.FC<AIChefProps> = ({
             </div>
           )}
 
-          {/* Messages - filtered by history toggle */}
-          {(showHistory ? messages : messages.slice(-6)).map((msg, index) => (
+          {/* Messages - only show when not in history list view */}
+          {!showHistory && messages.map((msg, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, y: 20, scale: 0.95 }}

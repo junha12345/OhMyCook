@@ -21,13 +21,33 @@ function readRuntimeEnv(keyCandidates: string[]): string | undefined {
   return undefined;
 }
 
-const supabaseUrl =
+const envSupabaseUrl =
   import.meta.env.VITE_SUPABASE_URL ||
-  readRuntimeEnv(['VITE_SUPABASE_URL', 'SUPABASE_URL', 'SUPABASE_URL_PUBLIC']);
+  import.meta.env.NEXT_PUBLIC_SUPABASE_URL ||
+  import.meta.env.SUPABASE_URL ||
+  import.meta.env.SUPABASE_URL_PUBLIC;
 
-const supabaseAnonKey =
+const envSupabaseAnonKey =
   import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  readRuntimeEnv(['VITE_SUPABASE_ANON_KEY', 'SUPABASE_ANON_KEY', 'SUPABASE_PUBLIC_ANON_KEY']);
+  import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  import.meta.env.SUPABASE_ANON_KEY ||
+  import.meta.env.SUPABASE_PUBLIC_ANON_KEY;
+
+const supabaseUrl = envSupabaseUrl ||
+  readRuntimeEnv([
+    'VITE_SUPABASE_URL',
+    'NEXT_PUBLIC_SUPABASE_URL',
+    'SUPABASE_URL',
+    'SUPABASE_URL_PUBLIC',
+  ]);
+
+const supabaseAnonKey = envSupabaseAnonKey ||
+  readRuntimeEnv([
+    'VITE_SUPABASE_ANON_KEY',
+    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    'SUPABASE_ANON_KEY',
+    'SUPABASE_PUBLIC_ANON_KEY',
+  ]);
 
 const hasSupabaseConfig = Boolean(supabaseUrl && supabaseAnonKey);
 export const isSupabaseConfigured = hasSupabaseConfig;

@@ -34,6 +34,8 @@ const Profile: React.FC<ProfileProps> = ({ user, settings, onLogout, onNavigate,
         );
     }
 
+    const displayName = user?.nickname || (user ? user.email.split('@')[0] : 'Guest');
+
     return (
         <div className="flex flex-col h-full bg-background pb-24">
             <MainHeader />
@@ -45,9 +47,7 @@ const Profile: React.FC<ProfileProps> = ({ user, settings, onLogout, onNavigate,
                         <ProfileIcon className="w-8 h-8" />
                     </div>
                     <div>
-                        <h2 className="text-xl font-bold text-text-primary">
-                            {user ? user.email.split('@')[0] : 'Guest'}
-                        </h2>
+                        <h2 className="text-xl font-bold text-text-primary">{displayName}</h2>
                         <p className="text-sm text-text-secondary">{user?.email}</p>
                     </div>
                 </div>

@@ -44,8 +44,8 @@ const AppContent: React.FC = () => {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Navigation State
-  const [currentView, setCurrentView] = useState<View>('tab');
-  const [currentTab, setCurrentTab] = useState<Tab>('cook');
+  const [currentView, setCurrentView] = useLocalStorage<View>(`ohmycook-currentView-${userStorageSuffix}`, 'tab');
+  const [currentTab, setCurrentTab] = useLocalStorage<Tab>(`ohmycook-currentTab-${userStorageSuffix}`, 'cook');
   const [previousView, setPreviousView] = useState<View>('tab');
   const [navigationDirection, setNavigationDirection] = useState<'left' | 'right' | 'fade'>('left');
   const [chatContext, setChatContext] = useState<Recipe | null>(null);
@@ -157,7 +157,7 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const handleSignup = (newUser: Pick<User, 'email' | 'password'>) => {
+  const handleSignup = (newUser: Pick<User, 'email' | 'password' | 'nickname'>) => {
     setUsers(prev => [...prev, { ...newUser, hasCompletedOnboarding: false }]);
     setCurrentView('auth');
   };

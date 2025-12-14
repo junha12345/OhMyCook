@@ -148,6 +148,8 @@ export const translations = {
     suggestedQ4: 'How to double the recipe for 2 servings?',
     // Community
     shareSavedRecipe: 'Share a saved recipe',
+    writePost: 'Write a post',
+    closeComposer: 'Hide form',
     shareRequiresSaved: 'Save a recipe first to share it with the community.',
     selectRecipeToShare: 'Select a recipe to share',
     communityNotePlaceholder: 'Add a note or tip about this recipe.',
@@ -388,6 +390,8 @@ export const translations = {
     suggestedQ4: '2인분으로 늘리려면?',
     // Community
     shareSavedRecipe: '저장한 레시피 공유하기',
+    writePost: '글쓰기',
+    closeComposer: '닫기',
     shareRequiresSaved: '레시피를 먼저 저장하면 커뮤니티에 공유할 수 있어요.',
     selectRecipeToShare: '공유할 레시피 선택',
     communityNotePlaceholder: '레시피 팁이나 후기를 적어보세요.',

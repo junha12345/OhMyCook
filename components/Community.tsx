@@ -29,6 +29,7 @@ const Community: React.FC<CommunityProps> = ({
   const [note, setNote] = useState('');
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
 
   useEffect(() => {
     if (savedRecipes.length > 0 && !selectedRecipeName) {
@@ -136,58 +137,68 @@ const Community: React.FC<CommunityProps> = ({
 
       <div className="p-4 pb-24 overflow-y-auto">
         <div className="bg-surface p-4 rounded-2xl border border-line-light shadow-subtle mb-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-12 h-12 rounded-2xl bg-brand-primary/10 text-brand-dark flex items-center justify-center font-bold text-lg">
-              <UsersIcon className="w-6 h-6" />
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-brand-primary/10 text-brand-dark flex items-center justify-center font-bold text-lg">
+                <UsersIcon className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="font-bold text-lg text-text-primary">{t('communityTitle')}</p>
+                <p className="text-sm text-text-secondary">{t('communitySubtitle')}</p>
+              </div>
             </div>
-            <div>
-              <p className="font-bold text-lg text-text-primary">{t('communityTitle')}</p>
-              <p className="text-sm text-text-secondary">{t('communitySubtitle')}</p>
-            </div>
+            <button
+              onClick={() => setIsComposerOpen((prev) => !prev)}
+              className="h-10 px-4 rounded-lg bg-brand-primary text-white text-sm font-semibold shadow-subtle hover:shadow-md transition"
+            >
+              {isComposerOpen ? t('closeComposer') : t('writePost')}
+            </button>
           </div>
 
-          <div className="bg-brand-primary/5 p-3 rounded-xl">
-            <p className="text-sm font-semibold text-text-primary mb-2">{t('shareSavedRecipe')}</p>
-            {savedRecipes.length === 0 ? (
-              <p className="text-sm text-text-secondary">{t('shareRequiresSaved')}</p>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  {renderAvatar({
-                    imageUrl: currentUserProfileImage,
-                    fallbackText: currentUser?.email?.[0]?.toUpperCase() || '?',
-                  })}
-                  <div className="flex-1">
-                    <label className="text-xs text-text-secondary block mb-1">{t('selectRecipeToShare')}</label>
-                    <select
-                      value={selectedRecipeName}
-                      onChange={(e) => setSelectedRecipeName(e.target.value)}
-                      className="w-full bg-white border border-line-light rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                    >
-                      {savedRecipes.map((recipe) => (
-                        <option key={recipe.recipeName} value={recipe.recipeName}>
-                          {recipe.recipeName}
-                        </option>
-                      ))}
-                    </select>
+          {isComposerOpen && (
+            <div className="bg-brand-primary/5 p-3 rounded-xl">
+              <p className="text-sm font-semibold text-text-primary mb-2">{t('shareSavedRecipe')}</p>
+              {savedRecipes.length === 0 ? (
+                <p className="text-sm text-text-secondary">{t('shareRequiresSaved')}</p>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    {renderAvatar({
+                      imageUrl: currentUserProfileImage,
+                      fallbackText: currentUser?.email?.[0]?.toUpperCase() || '?',
+                    })}
+                    <div className="flex-1">
+                      <label className="text-xs text-text-secondary block mb-1">{t('selectRecipeToShare')}</label>
+                      <select
+                        value={selectedRecipeName}
+                        onChange={(e) => setSelectedRecipeName(e.target.value)}
+                        className="w-full bg-white border border-line-light rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                      >
+                        {savedRecipes.map((recipe) => (
+                          <option key={recipe.recipeName} value={recipe.recipeName}>
+                            {recipe.recipeName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
+                  <textarea
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder={t('communityNotePlaceholder') || ''}
+                    className="w-full bg-white border border-line-light rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                    rows={3}
+                  />
+                  <button
+                    onClick={handleShare}
+                    className="w-full bg-brand-primary text-white font-semibold py-2 rounded-lg shadow-subtle hover:shadow-md transition"
+                  >
+                    {t('postToCommunity')}
+                  </button>
                 </div>
-                <textarea
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder={t('communityNotePlaceholder') || ''}
-                  className="w-full bg-white border border-line-light rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                  rows={3}
-                />
-                <button
-                  onClick={handleShare}
-                  className="w-full bg-brand-primary text-white font-semibold py-2 rounded-lg shadow-subtle hover:shadow-md transition"
-                >
-                  {t('postToCommunity')}
-                </button>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
 
         {sortedPosts.length === 0 ? (

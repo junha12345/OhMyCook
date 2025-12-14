@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Recipe, ShoppingListItem } from '../types';
-import { ClockIcon, FireIcon, XIcon, BookmarkIcon, ChatBubbleIcon, CheckCircleIcon, CircleIcon } from './icons';
+import { ClockIcon, FireIcon, XIcon, BookmarkIcon, ChatBubbleIcon, CheckCircleIcon, CircleIcon, ShoppingCartIcon } from './icons';
 import { useLanguage } from '../context/LanguageContext';
 import ImageWithFallback from './ImageWithFallback';
 import Spinner from './Spinner';
@@ -121,13 +121,18 @@ export const RecipeDetailModal: React.FC<{
         imageUrl = `https://source.unsplash.com/112x180/?${query.trim().replace(/\s+/g, ',')},food`;
     }
 
+    const [feedbackItem, setFeedbackItem] = useState<string | null>(null);
+
+    const handleAddToList = (ing: string, isAdded: boolean) => {
+        onToggleShoppingListItem(ing);
+        if (!isAdded) {
+            setFeedbackItem(ing);
+            setTimeout(() => setFeedbackItem(null), 2000);
+        }
+    };
+
     return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4 font-sans"
-        >
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4 font-sans">
             <motion.div
                 initial={{ scale: 0.9, opacity: 0, y: 20 }}
                 animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -191,18 +196,31 @@ export const RecipeDetailModal: React.FC<{
                             {recipe.missingIngredients && recipe.missingIngredients.length > 0 && (
                                 <div className="mt-3">
                                     <h4 className="font-bold text-red-600">{t('missingIngredients')}</h4>
-                                    <ul className="list-disc list-inside text-red-500 space-y-1">
+                                    <ul className="text-red-500 space-y-2 mt-2">
                                         {recipe.missingIngredients.map(ing => {
                                             const isAdded = shoppingList.some(item => item.name === ing);
+                                            const showFeedback = feedbackItem === ing;
+
                                             return (
                                                 <li key={ing} className="flex justify-between items-center py-1">
-                                                    <span>{ing}</span>
-                                                    <button
-                                                        onClick={() => onToggleShoppingListItem(ing)}
-                                                        className={`text-xs font-bold px-3 py-1 rounded-full ${isAdded ? 'bg-green-600 text-white' : 'bg-brand-primary text-white'}`}
-                                                    >
-                                                        {isAdded ? t('addedToShoppingList') : t('addToShoppingList')}
-                                                    </button>
+                                                    <span className="flex items-center gap-2">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                                                        {ing}
+                                                    </span>
+
+                                                    {showFeedback ? (
+                                                        <span className="text-xs font-bold text-green-600 animate-fade-in px-2">
+                                                            Added to Shopping List
+                                                        </span>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => handleAddToList(ing, isAdded)}
+                                                            className={`p-2 rounded-full transition-colors ${isAdded ? 'text-text-secondary bg-gray-100' : 'text-brand-primary bg-brand-light/50 hover:bg-brand-light'}`}
+                                                            title={isAdded ? t('addedToShoppingList') : t('addToShoppingList')}
+                                                        >
+                                                            <ShoppingCartIcon className="w-5 h-5" />
+                                                        </button>
+                                                    )}
                                                 </li>
                                             );
                                         })}
@@ -254,7 +272,7 @@ export const RecipeDetailModal: React.FC<{
                     <ChatBubbleIcon className="w-6 h-6" />
                 </button>
             </motion.div>
-        </motion.div>
+        </div>
     );
 };
 

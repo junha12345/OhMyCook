@@ -241,11 +241,35 @@ class SupabaseAuth {
     const redirectTo = options?.redirectTo ?? (typeof window !== 'undefined' ? window.location.href : '');
     const url = `${supabaseUrl}/auth/v1/authorize?provider=${encodeURIComponent(provider)}&redirect_to=${encodeURIComponent(redirectTo)}`;
 
-    if (typeof window !== 'undefined') {
-      window.location.href = url;
-    }
+    try {
+      // Preflight to surface clear errors (e.g., provider disabled) before redirecting the browser.
+      const response = await fetch(url, {
+        redirect: typeof window === 'undefined' ? 'follow' : 'manual',
+        headers: { apikey: supabaseAnonKey! },
+      });
 
-    return { data: { url }, error: null };
+      if (!response.ok && response.type !== 'opaqueredirect') {
+        const text = await response.text();
+        let message = 'Unable to start OAuth flow.';
+        try {
+          const parsed = JSON.parse(text) as { error_description?: string; error?: string; msg?: string };
+          message = parsed.error_description || parsed.error || parsed.msg || message;
+        } catch {
+          if (text) message = text;
+        }
+        return { data: {}, error: new Error(message) };
+      }
+
+      const nextUrl = response.headers.get('Location') || url;
+      if (typeof window !== 'undefined') {
+        window.location.href = nextUrl;
+      }
+
+      return { data: { url: nextUrl }, error: null };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to start OAuth flow.';
+      return { data: {}, error: new Error(message) };
+    }
   }
 }
 

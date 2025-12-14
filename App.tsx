@@ -461,6 +461,18 @@ const AppContent: React.FC = () => {
   };
 
   const handleDeleteCommunityPost = async (postId: string) => {
+    // Verify user is authenticated
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
+
+    // Confirm deletion
+    if (!confirm(t('confirmDeletePost'))) {
+      return;
+    }
+
     // First delete associated comments
     const { error: commentsError } = await supabase
       .from('community_comments')
@@ -469,13 +481,15 @@ const AppContent: React.FC = () => {
 
     if (commentsError) {
       console.error("Error deleting comments:", commentsError);
+      alert(`댓글 삭제 실패: ${commentsError.message}`);
+      return;
     }
 
     // Then delete the post
     const { error } = await supabase.from('community_posts').delete().eq('id', postId);
     if (error) {
       console.error("Delete error:", error);
-      alert("삭제 실패");
+      alert(`삭제 실패: ${error.message}`);
     } else {
       setCommunityPosts(prev => prev.filter(p => p.id !== postId));
       alert("삭제되었습니다.");

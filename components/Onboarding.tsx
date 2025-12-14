@@ -1,6 +1,6 @@
 
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { UserSettings } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 import { FireIcon, XIcon, SearchIcon, MicrowaveIcon, InductionIcon, GasStoveIcon, AirFryerIcon, OvenIcon, BlenderIcon } from './icons';
@@ -24,20 +24,46 @@ const ProgressBar: React.FC<{ step: number; totalSteps: number }> = ({ step, tot
 
 const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack, skipIngredients = false }) => {
   const [step, setStep] = useState(1);
-  const [settings, setSettings] = useState<UserSettings>(initialSettings);
+  const mergedSettings: UserSettings = {
+    nickname: '',
+    profileImage: '',
+    ...initialSettings
+  };
+  const [settings, setSettings] = useState<UserSettings>(mergedSettings);
   const [selectedInitialIngredients, setSelectedInitialIngredients] = useState<string[]>([]);
   const { t, language } = useLanguage();
-  const totalSteps = skipIngredients ? 5 : 6;
+  const totalSteps = 6;
 
   const [customIngredientSearch, setCustomIngredientSearch] = useState('');
   const [searchSuggestions, setSearchSuggestions] = useState<(typeof ALL_INGREDIENTS[0])[]>([]);
 
   const [allergySearch, setAllergySearch] = useState('');
   const [allergySuggestions, setAllergySuggestions] = useState<(typeof ALL_INGREDIENTS[0])[]>([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleNext = () => setStep(prev => Math.min(prev + 1, totalSteps));
   const handlePrev = () => setStep(prev => Math.max(prev - 1, 1));
   const handleFinish = () => onSave(settings, selectedInitialIngredients);
+
+  const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setSettings(prev => ({ ...prev, profileImage: result }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleProfileImageClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleNicknameChange = (value: string) => {
+    setSettings(prev => ({ ...prev, nickname: value }));
+  };
 
   const handleInitialIngredientToggle = (ingredientName: string) => {
     setSelectedInitialIngredients(prev =>
@@ -286,84 +312,143 @@ const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack
             </div>
           </div>
         );
-      case 6: // Initial Ingredients
+      case 6: // Profile & Initial Ingredients
         return (
-          <div className="flex flex-col h-full">
-            <h2 className="text-xl font-bold mb-1">{t('ingredientManagerTitle')}</h2>
-            <div className="p-4 pb-0 px-0">
-              <div className="relative mb-4">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary" />
-                <input
-                  type="text"
-                  value={customIngredientSearch}
-                  onChange={handleCustomSearchChange}
-                  placeholder={t('searchIngredients')}
-                  className="w-full bg-surface border border-line-light rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
-                />
-                {searchSuggestions.length > 0 && (
-                  <ul className="absolute z-10 w-full mt-1 border border-line-light rounded-lg max-h-60 overflow-y-auto bg-surface shadow-lg">
-                    {INGREDIENT_CATEGORIES.map(category => {
-                      const categorySuggestions = searchSuggestions.filter(ing => getIngredientCategory(ing.en) === category);
-                      if (categorySuggestions.length === 0) return null;
+          <div className="flex flex-col h-full space-y-4">
+            <div className="bg-surface border border-line-light rounded-2xl shadow-sm p-4">
+              <h2 className="text-xl font-bold mb-1">{t('profileSetupTitle')}</h2>
+              <p className="text-text-secondary mb-4">{t('profileSetupSubtitle')}</p>
+              <div className="flex items-center gap-4">
+                <div className="flex flex-col items-center w-28">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleProfileImageChange}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleProfileImageClick}
+                    className="relative w-24 h-24 rounded-full bg-gray-100 border-2 border-line-light flex items-center justify-center overflow-hidden shadow-sm hover:border-brand-primary hover:shadow-md transition"
+                  >
+                    {settings.profileImage ? (
+                      <img src={settings.profileImage} alt={t('profileSetupTitle')} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-4xl text-text-secondary">+</span>
+                    )}
+                    <div className="absolute inset-0 rounded-full ring-2 ring-white/60 pointer-events-none"></div>
+                  </button>
+                  <p className="text-xs text-text-secondary mt-2 text-center leading-tight">{t('profileImageHint')}</p>
+                </div>
 
-                      return (
-                        <React.Fragment key={category}>
-                          <li className="px-3 py-1 bg-brand-light/50 text-xs font-bold text-text-secondary uppercase">
-                            {t(category as any)}
-                          </li>
-                          {categorySuggestions.map(ing => (
-                            <li key={ing.en}>
-                              <button onClick={() => handleSuggestionSelect(ing.en)} className="w-full text-left p-2 pl-4 text-sm text-text-primary hover:bg-brand-light flex items-center gap-2">
-                                <span>{getIngredientEmoji(ing.en)}</span>
-                                <span>{getIngredientTranslation(ing.en, language)}</span>
-                              </button>
-                            </li>
-                          ))}
-                        </React.Fragment>
-                      );
-                    })}
-                  </ul>
-                )}
+                <div className="flex-1">
+                  <label className="text-sm font-bold text-text-secondary block mb-2">{t('profileNicknameLabel')}</label>
+                  <input
+                    type="text"
+                    value={settings.nickname ?? ''}
+                    onChange={e => handleNicknameChange(e.target.value)}
+                    placeholder={t('profileNicknamePlaceholder')}
+                    className="w-full bg-background border border-line-light rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
+                  />
+                  <p className="text-xs text-text-secondary mt-2">{t('profileNicknameHelper')}</p>
+                </div>
               </div>
             </div>
 
-            <div className="flex-grow overflow-y-auto pr-2">
-              {selectedInitialIngredients.length === 0 ? (
-                <div className="text-center text-text-secondary mt-10">
-                  <span className="text-6xl block mb-4 grayscale opacity-50">🥗</span>
-                  <p className="text-lg font-medium">{customIngredientSearch ? t('noSearchResults') : t('pleaseAddIngredients')}</p>
+            <div className="flex flex-col h-full">
+              <div className="flex items-center justify-between mb-1">
+                <h2 className="text-xl font-bold">{t('ingredientManagerTitle')}</h2>
+                {skipIngredients && (
+                  <span className="text-xs font-semibold text-text-secondary bg-background border border-line-light rounded-full px-3 py-1">
+                    {t('ingredientsOptionalNote')}
+                  </span>
+                )}
+              </div>
+
+              {skipIngredients ? (
+                <div className="flex-grow flex items-center justify-center text-text-secondary bg-surface border border-line-light rounded-2xl mt-2 px-4 text-center leading-relaxed">
+                  <p className="text-sm">{t('ingredientsSkipDescription')}</p>
                 </div>
               ) : (
-                <div className="space-y-6">
-                  {INGREDIENT_CATEGORIES.map(category => {
-                    const categoryIngredients = selectedInitialIngredients.filter(ing => getIngredientCategory(ing) === category);
-                    if (categoryIngredients.length === 0) return null;
+                <>
+                  <div className="p-4 pb-0 px-0">
+                    <div className="relative mb-4">
+                      <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary" />
+                      <input
+                        type="text"
+                        value={customIngredientSearch}
+                        onChange={handleCustomSearchChange}
+                        placeholder={t('searchIngredients')}
+                        className="w-full bg-surface border border-line-light rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
+                      />
+                      {searchSuggestions.length > 0 && (
+                        <ul className="absolute z-10 w-full mt-1 border border-line-light rounded-lg max-h-60 overflow-y-auto bg-surface shadow-lg">
+                          {INGREDIENT_CATEGORIES.map(category => {
+                            const categorySuggestions = searchSuggestions.filter(ing => getIngredientCategory(ing.en) === category);
+                            if (categorySuggestions.length === 0) return null;
 
-                    return (
-                      <div key={category}>
-                        <h3 className="text-sm font-bold text-text-secondary uppercase mb-3 ml-1">
-                          {t(category as any)}
-                        </h3>
-                        <div className="flex flex-wrap gap-2">
-                          {categoryIngredients.map(ing => (
-                            <div key={ing} className="bg-surface border border-line-light rounded-full pl-3 pr-2 py-2 shadow-sm flex items-center gap-2 animate-fade-in">
-                              <span className="text-lg leading-none">{getIngredientEmoji(ing)}</span>
-                              <span className="font-semibold text-text-primary text-sm whitespace-nowrap">
-                                {getIngredientTranslation(ing, language)}
-                              </span>
-                              <button
-                                onClick={() => handleInitialIngredientToggle(ing)}
-                                className="ml-1 p-1 text-text-secondary hover:text-red-500 rounded-full hover:bg-gray-100 transition-colors"
-                              >
-                                <XIcon className="w-4 h-4" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
+                            return (
+                              <React.Fragment key={category}>
+                                <li className="px-3 py-1 bg-brand-light/50 text-xs font-bold text-text-secondary uppercase">
+                                  {t(category as any)}
+                                </li>
+                                {categorySuggestions.map(ing => (
+                                  <li key={ing.en}>
+                                    <button onClick={() => handleSuggestionSelect(ing.en)} className="w-full text-left p-2 pl-4 text-sm text-text-primary hover:bg-brand-light flex items-center gap-2">
+                                      <span>{getIngredientEmoji(ing.en)}</span>
+                                      <span>{getIngredientTranslation(ing.en, language)}</span>
+                                    </button>
+                                  </li>
+                                ))}
+                              </React.Fragment>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex-grow overflow-y-auto pr-2">
+                    {selectedInitialIngredients.length === 0 ? (
+                      <div className="text-center text-text-secondary mt-6">
+                        <span className="text-6xl block mb-3 grayscale opacity-50">🥗</span>
+                        <p className="text-base font-medium">{customIngredientSearch ? t('noSearchResults') : t('pleaseAddIngredients')}</p>
                       </div>
-                    );
-                  })}
-                </div>
+                    ) : (
+                      <div className="space-y-6">
+                        {INGREDIENT_CATEGORIES.map(category => {
+                          const categoryIngredients = selectedInitialIngredients.filter(ing => getIngredientCategory(ing) === category);
+                          if (categoryIngredients.length === 0) return null;
+
+                          return (
+                            <div key={category}>
+                              <h3 className="text-sm font-bold text-text-secondary uppercase mb-3 ml-1">
+                                {t(category as any)}
+                              </h3>
+                              <div className="flex flex-wrap gap-2">
+                                {categoryIngredients.map(ing => (
+                                  <div key={ing} className="bg-surface border border-line-light rounded-full pl-3 pr-2 py-2 shadow-sm flex items-center gap-2 animate-fade-in">
+                                    <span className="text-lg leading-none">{getIngredientEmoji(ing)}</span>
+                                    <span className="font-semibold text-text-primary text-sm whitespace-nowrap">
+                                      {getIngredientTranslation(ing, language)}
+                                    </span>
+                                    <button
+                                      onClick={() => handleInitialIngredientToggle(ing)}
+                                      className="ml-1 p-1 text-text-secondary hover:text-red-500 rounded-full hover:bg-gray-100 transition-colors"
+                                    >
+                                      <XIcon className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
             </div>
           </div>

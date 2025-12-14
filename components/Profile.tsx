@@ -17,6 +17,7 @@ interface ProfileProps {
 const Profile: React.FC<ProfileProps> = ({ user, settings, onLogout, onNavigate, onUpdateSettings }) => {
     const { t, language, setLanguage } = useLanguage();
     const [showSettings, setShowSettings] = useState(false);
+    const displayName = settings.nickname?.trim() || (user ? user.email.split('@')[0] : 'Guest');
 
     if (showSettings) {
         return (
@@ -41,12 +42,16 @@ const Profile: React.FC<ProfileProps> = ({ user, settings, onLogout, onNavigate,
             <div className="p-6 space-y-6 overflow-y-auto">
                 {/* User Info Card */}
                 <div className="bg-surface p-6 rounded-2xl shadow-sm border border-line-light flex items-center gap-4">
-                    <div className="w-16 h-16 bg-brand-light rounded-full flex items-center justify-center text-brand-primary">
-                        <ProfileIcon className="w-8 h-8" />
+                    <div className="w-16 h-16 bg-brand-light rounded-full flex items-center justify-center text-brand-primary overflow-hidden">
+                        {settings.profileImage ? (
+                            <img src={settings.profileImage} alt={displayName} className="w-full h-full object-cover" />
+                        ) : (
+                            <ProfileIcon className="w-8 h-8" />
+                        )}
                     </div>
                     <div>
                         <h2 className="text-xl font-bold text-text-primary">
-                            {user ? user.email.split('@')[0] : 'Guest'}
+                            {displayName}
                         </h2>
                         <p className="text-sm text-text-secondary">{user?.email}</p>
                     </div>

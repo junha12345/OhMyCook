@@ -25,6 +25,8 @@ const defaultSettings: UserSettings = {
   availableTools: [],
   spicinessPreference: 3,
   maxCookTime: 30,
+  nickname: '',
+  profileImage: '',
 };
 
 type Tab = 'cook' | 'chat' | 'popular' | 'profile';

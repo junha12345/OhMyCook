@@ -7,6 +7,8 @@ export interface UserSettings {
   availableTools: string[];
   spicinessPreference: number;
   maxCookTime: number;
+  nickname: string;
+  profileImage?: string;
 }
 
 export interface Recipe {

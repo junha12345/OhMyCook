@@ -30,6 +30,27 @@ export interface Recipe {
   imageUrl?: string;
 }
 
+export interface CommunityComment {
+  id: string;
+  authorEmail: string;
+  authorName?: string;
+  authorProfileImage?: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface CommunityPost {
+  id: string;
+  authorEmail: string;
+  authorName?: string;
+  authorProfileImage?: string;
+  recipe: Recipe;
+  note?: string;
+  createdAt: string;
+  likes: string[];
+  comments: CommunityComment[];
+}
+
 export interface ChatMessage {
   role: 'user' | 'model';
   parts: { text: string }[];

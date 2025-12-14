@@ -1,5 +1,33 @@
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+function readRuntimeEnv(keyCandidates: string[]): string | undefined {
+  if (typeof globalThis === 'undefined') return undefined;
+
+  for (const key of keyCandidates) {
+    const value = (globalThis as Record<string, unknown>)[key];
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  if (typeof document !== 'undefined') {
+    for (const key of keyCandidates) {
+      const meta = document.querySelector(`meta[name="${key}"]`);
+      const content = meta?.getAttribute('content');
+      if (content && content.trim()) {
+        return content.trim();
+      }
+    }
+  }
+
+  return undefined;
+}
+
+const supabaseUrl =
+  import.meta.env.VITE_SUPABASE_URL ||
+  readRuntimeEnv(['VITE_SUPABASE_URL', 'SUPABASE_URL', 'SUPABASE_URL_PUBLIC']);
+
+const supabaseAnonKey =
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  readRuntimeEnv(['VITE_SUPABASE_ANON_KEY', 'SUPABASE_ANON_KEY', 'SUPABASE_PUBLIC_ANON_KEY']);
 
 const hasSupabaseConfig = Boolean(supabaseUrl && supabaseAnonKey);
 export const isSupabaseConfigured = hasSupabaseConfig;

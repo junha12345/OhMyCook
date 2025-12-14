@@ -109,7 +109,8 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack, initialMode = 'login
 
           {!supabaseReady && (
             <p className="text-xs text-text-secondary text-center mt-2">
-              Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable Google sign-in.
+              Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (build-time env or a runtime window/meta value) to enable Google
+              sign-in.
             </p>
           )}
 

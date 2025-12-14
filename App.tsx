@@ -42,7 +42,7 @@ const AppContent: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('tab');
   const [currentTab, setCurrentTab] = useState<Tab>('cook');
   const [previousView, setPreviousView] = useState<View>('tab');
-  const [navigationDirection, setNavigationDirection] = useState<'left' | 'right'>('left');
+  const [navigationDirection, setNavigationDirection] = useState<'left' | 'right' | 'fade'>('left');
   const [chatContext, setChatContext] = useState<Recipe | null>(null);
   const [chatHistories, setChatHistories] = useState<Record<string, ChatMessage[]>>({});
   const [chatOpenedFromRecipe, setChatOpenedFromRecipe] = useState<Recipe | null>(null);
@@ -224,8 +224,8 @@ const AppContent: React.FC = () => {
     if (!currentUser && currentView !== 'auth' && currentView !== 'onboarding') {
       return (
         <LandingPage
-          onGetStarted={() => { setAuthMode('signup'); setCurrentView('auth'); }}
-          onLogin={() => { setAuthMode('login'); setCurrentView('auth'); }}
+          onGetStarted={() => { setNavigationDirection('fade'); setAuthMode('signup'); setCurrentView('auth'); }}
+          onLogin={() => { setNavigationDirection('fade'); setAuthMode('login'); setCurrentView('auth'); }}
         />
       );
     }

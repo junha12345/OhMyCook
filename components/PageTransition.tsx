@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 interface PageTransitionProps {
     children: React.ReactNode;
-    direction?: 'left' | 'right' | 'up' | 'down';
+    direction?: 'left' | 'right' | 'up' | 'down' | 'fade';
     className?: string;
 }
 
@@ -16,8 +16,8 @@ const PageTransition: React.FC<PageTransitionProps> = ({
     const variants = {
         hidden: (dir: string) => ({
             opacity: 0,
-            x: dir === 'left' ? '100%' : dir === 'right' ? '-100%' : 0,
-            y: dir === 'up' ? '100%' : dir === 'down' ? '-100%' : 0,
+            x: dir === 'fade' ? 0 : dir === 'left' ? '100%' : dir === 'right' ? '-100%' : 0,
+            y: dir === 'fade' ? 0 : dir === 'up' ? '100%' : dir === 'down' ? '-100%' : 0,
         }),
         visible: {
             opacity: 1,
@@ -26,8 +26,8 @@ const PageTransition: React.FC<PageTransitionProps> = ({
         },
         exit: (dir: string) => ({
             opacity: 0,
-            x: dir === 'left' ? '-100%' : dir === 'right' ? '100%' : 0,
-            y: dir === 'up' ? '-100%' : dir === 'down' ? '100%' : 0,
+            x: dir === 'fade' ? 0 : dir === 'left' ? '-100%' : dir === 'right' ? '100%' : 0,
+            y: dir === 'fade' ? 0 : dir === 'up' ? '-100%' : dir === 'down' ? '100%' : 0,
         }),
     };
 

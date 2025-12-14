@@ -6,7 +6,7 @@ import { LogoIcon } from './icons';
 interface AuthProps {
   users: User[];
   onLogin: (user: User) => void;
-  onSignup: (newUser: Pick<User, 'email' | 'password' | 'nickname'>) => void;
+  onSignup: (newUser: Pick<User, 'email' | 'password'>) => void;
   onBack: () => void;
   initialMode?: 'login' | 'signup';
 }
@@ -15,7 +15,6 @@ const Auth: React.FC<AuthProps> = ({ users, onLogin, onSignup, onBack, initialMo
   const [isLoginMode, setIsLoginMode] = useState(initialMode === 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [nickname, setNickname] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const { t } = useLanguage();
@@ -38,14 +37,9 @@ const Auth: React.FC<AuthProps> = ({ users, onLogin, onSignup, onBack, initialMo
       if (userExists) {
         setError(t('userExists'));
       } else {
-        if (!nickname.trim()) {
-          setError(t('nicknameRequired'));
-          return;
-        }
-        onSignup({ email, password, nickname: nickname.trim() });
+        onSignup({ email, password });
         setMessage(t('signupSuccess'));
         setIsLoginMode(true); // Switch to login after successful signup
-        setNickname('');
       }
     }
   };
@@ -72,19 +66,6 @@ const Auth: React.FC<AuthProps> = ({ users, onLogin, onSignup, onBack, initialMo
                 className="w-full bg-background border border-line-light rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
               />
             </div>
-            {!isLoginMode && (
-              <div>
-                <label className="text-sm font-bold text-text-secondary block mb-1">{t('nickname')}</label>
-                <input
-                  type="text"
-                  value={nickname}
-                  onChange={e => setNickname(e.target.value)}
-                  required
-                  className="w-full bg-background border border-line-light rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
-                  placeholder={t('nicknamePlaceholder')}
-                />
-              </div>
-            )}
             <div>
               <label className="text-sm font-bold text-text-secondary block mb-1">{t('password')}</label>
               <input

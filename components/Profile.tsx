@@ -11,7 +11,7 @@ interface ProfileProps {
     settings: UserSettings;
     onLogout: () => void;
     onNavigate: (view: any) => void;
-    onUpdateSettings: (settings: UserSettings) => void;
+    onUpdateSettings: (settings: UserSettings, initialIngredients?: string[], profile?: { nickname: string; avatar?: string }) => void;
 }
 
 const Profile: React.FC<ProfileProps> = ({ user, settings, onLogout, onNavigate, onUpdateSettings }) => {
@@ -23,8 +23,10 @@ const Profile: React.FC<ProfileProps> = ({ user, settings, onLogout, onNavigate,
             <div className="fixed inset-0 z-[100] bg-background">
                 <Onboarding
                     initialSettings={settings}
-                    onSave={(newSettings) => {
-                        onUpdateSettings(newSettings);
+                    initialNickname={user?.nickname}
+                    initialAvatar={user?.avatar}
+                    onSave={(newSettings, _ingredients, profile) => {
+                        onUpdateSettings(newSettings, _ingredients, profile);
                         setShowSettings(false);
                     }}
                     onBack={() => setShowSettings(false)}
@@ -35,6 +37,7 @@ const Profile: React.FC<ProfileProps> = ({ user, settings, onLogout, onNavigate,
     }
 
     const displayName = user?.nickname || (user ? user.email.split('@')[0] : 'Guest');
+    const avatar = user?.avatar;
 
     return (
         <div className="flex flex-col h-full bg-background pb-24">
@@ -43,9 +46,13 @@ const Profile: React.FC<ProfileProps> = ({ user, settings, onLogout, onNavigate,
             <div className="p-6 space-y-6 overflow-y-auto">
                 {/* User Info Card */}
                 <div className="bg-surface p-6 rounded-2xl shadow-sm border border-line-light flex items-center gap-4">
-                    <div className="w-16 h-16 bg-brand-light rounded-full flex items-center justify-center text-brand-primary">
-                        <ProfileIcon className="w-8 h-8" />
-                    </div>
+                    {avatar ? (
+                        <img src={avatar} alt={displayName} className="w-16 h-16 rounded-full object-cover border border-line-light" />
+                    ) : (
+                        <div className="w-16 h-16 bg-brand-light rounded-full flex items-center justify-center text-brand-primary">
+                            <ProfileIcon className="w-8 h-8" />
+                        </div>
+                    )}
                     <div>
                         <h2 className="text-xl font-bold text-text-primary">{displayName}</h2>
                         <p className="text-sm text-text-secondary">{user?.email}</p>

@@ -98,7 +98,11 @@ const AppContent: React.FC = () => {
     setChatOpenedFromRecipe(null);
   };
 
-  const handleSaveSettings = (newSettings: UserSettings, initialIngredients: string[] = []) => {
+  const handleSaveSettings = (
+    newSettings: UserSettings,
+    initialIngredients: string[] = [],
+    profileUpdates?: { nickname: string; avatar?: string }
+  ) => {
     setSettings(newSettings);
 
     if (initialIngredients.length > 0) {
@@ -110,15 +114,30 @@ const AppContent: React.FC = () => {
       setIngredients(prev => [...prev, ...newIngredientsToAdd]);
     }
 
-    // Mark onboarding as complete for the current user
-    if (currentUser && !currentUser.hasCompletedOnboarding) {
-      const updatedUsers = users.map(user =>
-        user.email === currentUser.email
-          ? { ...user, hasCompletedOnboarding: true }
-          : user
-      );
+    // Mark onboarding as complete for the current user and persist profile updates
+    if (currentUser) {
+      const updatedUsers = users.map(user => {
+        if (user.email !== currentUser.email) return user;
+
+        return {
+          ...user,
+          hasCompletedOnboarding: true,
+          nickname: profileUpdates?.nickname ?? user.nickname,
+          avatar: profileUpdates?.avatar ?? user.avatar,
+        };
+      });
+
       setUsers(updatedUsers);
-      setCurrentUser(prevUser => (prevUser ? { ...prevUser, hasCompletedOnboarding: true } : null));
+      setCurrentUser(prevUser => (
+        prevUser
+          ? {
+              ...prevUser,
+              hasCompletedOnboarding: true,
+              nickname: profileUpdates?.nickname ?? prevUser.nickname,
+              avatar: profileUpdates?.avatar ?? prevUser.avatar,
+            }
+          : null
+      ));
     }
 
     setCurrentView('tab');
@@ -157,7 +176,7 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const handleSignup = (newUser: Pick<User, 'email' | 'password' | 'nickname'>) => {
+  const handleSignup = (newUser: Pick<User, 'email' | 'password'>) => {
     setUsers(prev => [...prev, { ...newUser, hasCompletedOnboarding: false }]);
     setCurrentView('auth');
   };
@@ -245,7 +264,13 @@ const AppContent: React.FC = () => {
             case 'onboarding':
               return (
                 <PageTransition key="onboarding" direction={navigationDirection}>
-                  <Onboarding initialSettings={settings} onSave={handleSaveSettings} onBack={() => { setNavigationDirection('right'); setCurrentView(currentUser ? 'tab' : 'auth'); }} />
+                  <Onboarding
+                    initialSettings={settings}
+                    initialNickname={currentUser?.nickname}
+                    initialAvatar={currentUser?.avatar}
+                    onSave={handleSaveSettings}
+                    onBack={() => { setNavigationDirection('right'); setCurrentView(currentUser ? 'tab' : 'auth'); }}
+                  />
                 </PageTransition>
               );
 

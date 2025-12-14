@@ -8,9 +8,11 @@ import { COMMON_INGREDIENTS, getIngredientCategory, getIngredientTranslation, AL
 
 interface OnboardingProps {
   initialSettings: UserSettings;
-  onSave: (settings: UserSettings, initialIngredients: string[]) => void;
+  onSave: (settings: UserSettings, initialIngredients: string[], profile: { nickname: string; avatar?: string }) => void;
   onBack: () => void;
   skipIngredients?: boolean;
+  initialNickname?: string;
+  initialAvatar?: string;
 }
 
 const ProgressBar: React.FC<{ step: number; totalSteps: number }> = ({ step, totalSteps }) => (
@@ -22,12 +24,13 @@ const ProgressBar: React.FC<{ step: number; totalSteps: number }> = ({ step, tot
   </div>
 );
 
-const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack, skipIngredients = false }) => {
+const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack, skipIngredients = false, initialNickname = '', initialAvatar = '' }) => {
   const [step, setStep] = useState(1);
   const [settings, setSettings] = useState<UserSettings>(initialSettings);
   const [selectedInitialIngredients, setSelectedInitialIngredients] = useState<string[]>([]);
   const { t, language } = useLanguage();
-  const totalSteps = skipIngredients ? 5 : 6;
+  const totalSteps = (skipIngredients ? 5 : 6) + 1;
+  const profileStep = totalSteps;
 
   const [customIngredientSearch, setCustomIngredientSearch] = useState('');
   const [searchSuggestions, setSearchSuggestions] = useState<(typeof ALL_INGREDIENTS[0])[]>([]);
@@ -35,9 +38,29 @@ const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack
   const [allergySearch, setAllergySearch] = useState('');
   const [allergySuggestions, setAllergySuggestions] = useState<(typeof ALL_INGREDIENTS[0])[]>([]);
 
-  const handleNext = () => setStep(prev => Math.min(prev + 1, totalSteps));
+  const [nickname, setNickname] = useState(initialNickname);
+  const [avatarPreview, setAvatarPreview] = useState(initialAvatar);
+  const [error, setError] = useState('');
+
+  const handleNext = () => {
+    setError('');
+    setStep(prev => Math.min(prev + 1, totalSteps));
+  };
   const handlePrev = () => setStep(prev => Math.max(prev - 1, 1));
-  const handleFinish = () => onSave(settings, selectedInitialIngredients);
+  const handleFinish = () => {
+    setError('');
+    const trimmedNickname = nickname.trim();
+
+    if (!trimmedNickname) {
+      setError(t('nicknameRequired'));
+      return;
+    }
+
+    onSave(settings, selectedInitialIngredients, {
+      nickname: trimmedNickname,
+      avatar: avatarPreview || undefined,
+    });
+  };
 
   const handleInitialIngredientToggle = (ingredientName: string) => {
     setSelectedInitialIngredients(prev =>
@@ -69,7 +92,79 @@ const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack
     setSearchSuggestions([]);
   };
 
+  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = e => {
+      const result = e.target?.result;
+      if (typeof result === 'string') {
+        setAvatarPreview(result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveAvatar = () => {
+    setAvatarPreview('');
+  };
+
+  const renderProfileStep = () => (
+    <div className="flex flex-col h-full gap-6">
+      <div>
+        <h2 className="text-xl font-bold mb-1">{t('profileSetupTitle')}</h2>
+        <p className="text-text-secondary">{t('profileSetupSubtitle')}</p>
+      </div>
+
+      <div className="flex flex-col items-center gap-3">
+        <div className="relative">
+          <div className="w-28 h-28 rounded-full bg-line-light overflow-hidden flex items-center justify-center text-3xl text-text-secondary">
+            {avatarPreview ? (
+              <img src={avatarPreview} alt={t('profilePhotoAlt')} className="w-full h-full object-cover" />
+            ) : (
+              <span aria-hidden>📸</span>
+            )}
+          </div>
+          <label className="absolute bottom-0 right-0 bg-brand-primary text-white text-xs font-bold px-3 py-2 rounded-full cursor-pointer shadow-lg">
+            {avatarPreview ? t('changePhoto') : t('addPhoto')}
+            <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+          </label>
+        </div>
+        {avatarPreview && (
+          <button type="button" onClick={handleRemoveAvatar} className="text-sm text-text-secondary underline">
+            {t('removePhoto')}
+          </button>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-bold text-text-secondary block">{t('nickname')}</label>
+        <input
+          type="text"
+          value={nickname}
+          onChange={e => setNickname(e.target.value)}
+          placeholder={t('nicknamePlaceholder')}
+          className="w-full bg-surface border border-line-light rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
+        />
+        {error && <p className="text-red-500 text-xs">{error}</p>}
+      </div>
+
+      <div className="flex items-center gap-3 p-4 bg-brand-light rounded-xl border border-brand-primary/20">
+        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-lg">🍳</div>
+        <div>
+          <p className="font-bold text-text-primary">{t('profileSetupHintTitle')}</p>
+          <p className="text-sm text-text-secondary">{t('profileSetupHintDescription')}</p>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderStep = () => {
+    if (step === profileStep) {
+      return renderProfileStep();
+    }
+
     switch (step) {
       case 1: // Cooking Level
         const levels: UserSettings['cookingLevel'][] = ['Beginner', 'Intermediate', 'Advanced'];

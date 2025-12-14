@@ -54,6 +54,7 @@ export interface User {
   email: string;
   password: string;
   nickname?: string;
+  avatar?: string;
   hasCompletedOnboarding: boolean;
 }
 

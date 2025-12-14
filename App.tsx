@@ -461,6 +461,17 @@ const AppContent: React.FC = () => {
   };
 
   const handleDeleteCommunityPost = async (postId: string) => {
+    // First delete associated comments
+    const { error: commentsError } = await supabase
+      .from('community_comments')
+      .delete()
+      .eq('post_id', postId);
+
+    if (commentsError) {
+      console.error("Error deleting comments:", commentsError);
+    }
+
+    // Then delete the post
     const { error } = await supabase.from('community_posts').delete().eq('id', postId);
     if (error) {
       console.error("Delete error:", error);

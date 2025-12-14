@@ -1,9 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
-
-
-
-import React, { SetStateAction, useCallback, useEffect, useState } from 'react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { UserSettings, Ingredient, ShoppingListItem, Recipe, User, ChatMessage } from './types';
 import IngredientManager from './components/IngredientManager';
@@ -36,32 +32,8 @@ type View = 'tab' | 'onboarding' | 'recommendations' | 'chat' | 'shoppingList' |
 
 // Main App Content Component
 const AppContent: React.FC = () => {
-  const [users, setUsers] = useLocalStorage<User[]>('ohmycook-users', []);
-  const [currentUser, setCurrentUser] = useLocalStorage<User | null>('ohmycook-currentUser', null);
-  const activeUserKey = currentUser?.email ?? 'guest';
-
-  const [userIngredients, setUserIngredients] = useLocalStorage<Record<string, Ingredient[]>>(
-    'ohmycook-user-ingredients',
-    {},
-  );
-  const [ingredients, setIngredientsState] = useState<Ingredient[]>(() => userIngredients[activeUserKey] ?? []);
-  const setIngredients: React.Dispatch<SetStateAction<Ingredient[]>> = useCallback(
-    (value: SetStateAction<Ingredient[]>) => {
-      setIngredientsState(prevIngredients => {
-        const nextIngredients = typeof value === 'function' ? (value as (prev: Ingredient[]) => Ingredient[])(prevIngredients) : value;
-
-        setUserIngredients(prevStore => ({
-          ...prevStore,
-          [activeUserKey]: nextIngredients,
-        }));
-
-        return nextIngredients;
-      });
-    },
-    [activeUserKey, setUserIngredients],
-  );
-
   const [settings, setSettings] = useLocalStorage<UserSettings>('ohmycook-settings', defaultSettings);
+  const [ingredients, setIngredients] = useLocalStorage<Ingredient[]>('ohmycook-ingredients', []);
   const [shoppingList, setShoppingList] = useLocalStorage<ShoppingListItem[]>('ohmycook-shoppinglist', []);
   const [savedRecipes, setSavedRecipes] = useLocalStorage<Recipe[]>('ohmycook-savedrecipes', []);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -71,8 +43,6 @@ const AppContent: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<Tab>('cook');
   const [previousView, setPreviousView] = useState<View>('tab');
   const [navigationDirection, setNavigationDirection] = useState<'left' | 'right' | 'fade'>('left');
-  const [currentView, setCurrentView] = useState<View>('home');
-  const [previousView, setPreviousView] = useState<View>('home');
   const [chatContext, setChatContext] = useState<Recipe | null>(null);
   const [chatHistories, setChatHistories] = useState<Record<string, ChatMessage[]>>({});
   const [chatOpenedFromRecipe, setChatOpenedFromRecipe] = useState<Recipe | null>(null);
@@ -81,7 +51,6 @@ const AppContent: React.FC = () => {
   const [users, setUsers] = useLocalStorage<User[]>('ohmycook-users', []);
   const [currentUser, setCurrentUser] = useLocalStorage<User | null>('ohmycook-currentUser', null);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
-  const [hasMigratedLegacyIngredients, setHasMigratedLegacyIngredients] = useState(false);
 
   const { language, t } = useLanguage();
 
@@ -95,39 +64,6 @@ const AppContent: React.FC = () => {
   }, [language, t]);
 
   const handleNavigate = (view: View, isBack: boolean = false) => {
-  useEffect(() => {
-    setIngredientsState(userIngredients[activeUserKey] ?? []);
-  }, [activeUserKey, userIngredients]);
-
-  useEffect(() => {
-    if (hasMigratedLegacyIngredients) return;
-
-    const legacyIngredients = localStorage.getItem('ohmycook-ingredients');
-    if (!legacyIngredients) {
-      setHasMigratedLegacyIngredients(true);
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(legacyIngredients) as Ingredient[];
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        setUserIngredients(prevStore => {
-          if (prevStore[activeUserKey]) return prevStore;
-          return {
-            ...prevStore,
-            [activeUserKey]: parsed,
-          };
-        });
-      }
-    } catch (error) {
-      console.error('Failed to migrate legacy ingredients', error);
-    } finally {
-      localStorage.removeItem('ohmycook-ingredients');
-      setHasMigratedLegacyIngredients(true);
-    }
-  }, [activeUserKey, hasMigratedLegacyIngredients, setUserIngredients]);
-  
-  const handleNavigate = (view: View) => {
     setPreviousView(currentView);
     setNavigationDirection(isBack ? 'right' : 'left');
     setCurrentView(view);

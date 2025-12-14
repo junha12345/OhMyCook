@@ -26,6 +26,7 @@ const Tag: React.FC<{ children: React.ReactNode; color: 'red' | 'green' | 'yello
 
 const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onSelect }) => {
     const { t } = useLanguage();
+    const isLoadingDetails = recipe.isDetailsLoaded === false;
 
     let imageUrl: string;
     if (recipe.imageUrl) {
@@ -51,7 +52,12 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onSelect }) => {
 
 
     return (
-        <div onClick={onSelect} className="bg-surface rounded-2xl shadow-subtle overflow-hidden flex cursor-pointer hover:shadow-lg transition-shadow">
+        <div onClick={onSelect} className={`bg-surface rounded-2xl shadow-subtle overflow-hidden flex cursor-pointer hover:shadow-lg transition-shadow relative ${isLoadingDetails ? 'opacity-60' : ''}`}>
+            {isLoadingDetails && (
+                <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-10 pointer-events-none">
+                    <Spinner size="sm" />
+                </div>
+            )}
             <ImageWithFallback src={imageUrl} alt={recipe.recipeName} className="w-28 h-auto object-cover" />
             <div className="p-4 flex flex-col justify-between flex-grow">
                 <div>

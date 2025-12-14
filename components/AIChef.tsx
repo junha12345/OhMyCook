@@ -50,11 +50,11 @@ const AIChef: React.FC<AIChefProps> = ({
     }
   }, [messages, onMessagesUpdate]);
 
-  // If chat opened from a recipe with no history, start with an ingredient-aware greeting
+  // If chat opened from a recipe with no history, start with a recipe-aware greeting
   useEffect(() => {
     if (recipeContext && openedFromRecipe && messages.length === 0) {
-      const preview = recipeContext.ingredients.slice(0, 6).join(', ');
-      const introText = `${t('aiChefGreeting')}${preview ? `\n${t('ingredients')}: ${preview}` : ''}`;
+      const recipeName = recipeContext.recipeName.split('(')[0].trim();
+      const introText = `${t('aiChefGreeting')}\n\n${t('chatAboutRecipe', { recipeName })}`;
       const introMessage: ChatMessage = { role: 'model', parts: [{ text: introText }] };
       setMessages([introMessage]);
     }
@@ -120,7 +120,7 @@ const AIChef: React.FC<AIChefProps> = ({
             <div className="bg-surface p-3 rounded-lg rounded-bl-none shadow-subtle">
               <p className="text-sm text-text-primary whitespace-pre-line">
                 {recipeContext && messages.length === 0
-                  ? `${t('aiChefGreeting')}\n${t('ingredients')}: ${recipeContext.ingredients.slice(0, 6).join(', ')}`
+                  ? `${t('aiChefGreeting')}\n\n${t('chatAboutRecipe', { recipeName: recipeContext.recipeName.split('(')[0].trim() })}`
                   : t('aiChefGreeting')}
               </p>
             </div>
@@ -153,7 +153,7 @@ const AIChef: React.FC<AIChefProps> = ({
       </div>
 
       <div className="p-4 border-t bg-background">
-        {messages.length === 0 && (
+        {messages.filter(m => m.role === 'user').length === 0 && (
           <>
             <p className="text-sm text-text-secondary mb-2">{t('suggestedQuestions')}</p>
             <div className="flex flex-wrap gap-2 mb-4">

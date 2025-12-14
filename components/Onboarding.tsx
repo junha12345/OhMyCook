@@ -467,7 +467,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack
       </div>
       <ProgressBar step={step} totalSteps={totalSteps} />
 
-      <div className="flex-grow my-8 overflow-y-hidden">
+      <div className="flex-grow my-8 overflow-y-auto">
         {renderStep()}
       </div>
 

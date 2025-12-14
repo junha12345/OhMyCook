@@ -14,7 +14,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ currentTab, onTabCh
     const { t } = useLanguage();
 
     const tabs: { id: Tab; icon: React.ElementType; label: string }[] = [
-        { id: 'cook', icon: FridgeIcon, label: 'Fridge' },
+        { id: 'cook', icon: FridgeIcon, label: t('myFridge') || 'Fridge' },
 
         { id: 'chat', icon: ChatBubbleIcon, label: t('chat') || 'Chat' },
         { id: 'popular', icon: TrendingUpIcon, label: t('popular') || 'Popular' },

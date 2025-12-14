@@ -2,6 +2,7 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 const hasSupabaseConfig = Boolean(supabaseUrl && supabaseAnonKey);
+export const isSupabaseConfigured = hasSupabaseConfig;
 const SESSION_STORAGE_KEY = 'ohmycook-supabase-session';
 
 type AuthEvent = 'SIGNED_IN' | 'SIGNED_OUT' | 'TOKEN_REFRESHED' | 'PASSWORD_RECOVERY';

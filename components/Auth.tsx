@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { User } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 import { LogoIcon } from './icons';
-import { supabase } from '../services/supabaseClient';
+import { supabase, isSupabaseConfigured } from '../services/supabaseClient';
 
 interface AuthProps {
   onAuthSuccess: (user: User) => void;
@@ -17,6 +17,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack, initialMode = 'login
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const supabaseReady = isSupabaseConfigured;
   const { t } = useLanguage();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -67,6 +68,10 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack, initialMode = 'login
   const handleGoogleLogin = async () => {
     setError('');
     setMessage('');
+    if (!supabaseReady) {
+      setError('Supabase is not configured.');
+      return;
+    }
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -93,13 +98,20 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack, initialMode = 'login
           <button
             type="button"
             onClick={handleGoogleLogin}
-            className="w-full border border-line-light text-text-primary font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:bg-background"
+            disabled={!supabaseReady}
+            className="w-full border border-line-light text-text-primary font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:bg-background disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <span role="img" aria-label="Google">
               📈
             </span>
             Continue with Google
           </button>
+
+          {!supabaseReady && (
+            <p className="text-xs text-text-secondary text-center mt-2">
+              Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable Google sign-in.
+            </p>
+          )}
 
           <div className="flex items-center my-6">
             <div className="flex-1 h-px bg-line-light" />

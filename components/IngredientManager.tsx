@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { PlusIcon, SearchIcon, XIcon, CameraIcon, SpatulaIcon } from './icons';
+import { PlusIcon, SearchIcon, XIcon, CameraIcon, SpatulaIcon, ChefHatIcon } from './icons';
 import { Ingredient } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 import { getIngredientCategory, getIngredientTranslation, INGREDIENT_CATEGORIES, getIngredientEmoji, ALL_INGREDIENTS } from '../data/ingredients';
@@ -193,15 +193,14 @@ const IngredientManager: React.FC<IngredientManagerProps> = ({ ingredients, setI
         )}
       </div>
 
-      <div className="fixed bottom-24 left-0 right-0 px-4 z-30 max-w-lg mx-auto">
+      <div className="fixed bottom-24 right-4 z-30">
         <button
           onClick={() => {
             if (onGenerateRecipe) onGenerateRecipe();
           }}
-          className="w-full bg-brand-primary text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg hover:bg-brand-dark transition-colors"
+          className="w-14 h-14 bg-gradient-to-tr from-orange-400 to-orange-500 text-white rounded-full flex items-center justify-center shadow-[0_4px_14px_0_rgba(249,115,22,0.39)] hover:scale-105 active:scale-95 transition-all duration-300"
         >
-          <SpatulaIcon className="w-6 h-6" />
-          <span>{t('generateRecipe')}</span>
+          <ChefHatIcon className="w-7 h-7" />
         </button>
       </div>
     </div>

@@ -42,7 +42,12 @@ const Community: React.FC<CommunityProps> = ({
   );
 
   const getImageUrl = (recipe: Recipe, size: number) => {
-    const query = (recipe.englishRecipeName || recipe.recipeName).trim().replace(/\s+/g, ',');
+    if (recipe.imageUrl) return recipe.imageUrl;
+
+    const query = (recipe.imageSearchQuery || recipe.englishRecipeName || recipe.recipeName)
+      .trim()
+      .replace(/\s+/g, ',');
+
     return `https://source.unsplash.com/${size}x${size}/?${query},food`;
   };
 

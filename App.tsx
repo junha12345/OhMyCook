@@ -16,8 +16,7 @@ import LandingPage from './components/LandingPage';
 import BottomNavigation from './components/BottomNavigation';
 import Profile from './components/Profile';
 import PageTransition from './components/PageTransition';
-import { supabase } from './services/supabaseClient';
-import type { User as SupabaseAuthUser } from '@supabase/supabase-js';
+import { supabase, type SupabaseAuthUser } from './services/supabaseClient';
 
 const defaultSettings: UserSettings = {
   cookingLevel: 'Beginner',

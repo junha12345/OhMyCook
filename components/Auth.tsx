@@ -7,7 +7,7 @@ import { supabase } from '../services/supabaseClient';
 interface AuthProps {
   users: User[];
   onLogin: (user: User) => void;
-  onSignup: (newUser: Pick<User, 'email' | 'password'>) => void;
+  onSignup: (newUser: Pick<User, 'email' | 'password'>) => { ok: boolean; reason?: 'duplicate' };
   onBack: () => void;
   initialMode?: 'login' | 'signup';
 }
@@ -33,15 +33,13 @@ const Auth: React.FC<AuthProps> = ({ users, onLogin, onSignup, onBack, initialMo
         setError(t('invalidCredentials'));
       }
     } else {
-      // Signup mode
-      const userExists = users.some(u => u.email === email);
-      if (userExists) {
+      const signupResult = onSignup({ email, password });
+      if (!signupResult.ok) {
         setError(t('userExists'));
-      } else {
-        onSignup({ email, password });
-        setMessage(t('signupSuccess'));
-        setIsLoginMode(true); // Switch to login after successful signup
+        return;
       }
+      setMessage(t('signupSuccess'));
+      setIsLoginMode(true); // Switch to login after successful signup
     }
   };
 

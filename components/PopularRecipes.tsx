@@ -10,6 +10,7 @@ import ImageWithFallback from './ImageWithFallback';
 
 interface PopularRecipesProps {
   onBack: () => void;
+  onLogoClick?: () => void;
   shoppingList: ShoppingListItem[];
   onToggleShoppingListItem: (itemName: string) => void;
   savedRecipes: Recipe[];
@@ -21,6 +22,7 @@ interface PopularRecipesProps {
 
 const PopularRecipes: React.FC<PopularRecipesProps> = ({
   onBack,
+  onLogoClick,
   shoppingList,
   onToggleShoppingListItem,
   savedRecipes,
@@ -60,7 +62,7 @@ const PopularRecipes: React.FC<PopularRecipesProps> = ({
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      <MainHeader />
+      <MainHeader onBack={onBack} onLogoClick={onLogoClick} />
 
       <div className="p-4 flex-shrink-0">
         <div className="relative flex bg-surface p-1 rounded-xl border border-line-light">

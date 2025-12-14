@@ -12,9 +12,10 @@ interface ProfileProps {
     onLogout: () => void;
     onNavigate: (view: any) => void;
     onUpdateSettings: (settings: UserSettings) => void;
+    onLogoClick?: () => void;
 }
 
-const Profile: React.FC<ProfileProps> = ({ user, settings, onLogout, onNavigate, onUpdateSettings }) => {
+const Profile: React.FC<ProfileProps> = ({ user, settings, onLogout, onNavigate, onUpdateSettings, onLogoClick }) => {
     const { t, language, setLanguage } = useLanguage();
     const [showSettings, setShowSettings] = useState(false);
     const displayName = settings.nickname?.trim() || (user ? user.email.split('@')[0] : 'Guest');
@@ -37,7 +38,7 @@ const Profile: React.FC<ProfileProps> = ({ user, settings, onLogout, onNavigate,
 
     return (
         <div className="flex flex-col h-full bg-background pb-24">
-            <MainHeader />
+            <MainHeader onLogoClick={onLogoClick} />
 
             <div className="p-6 space-y-6 overflow-y-auto">
                 {/* User Info Card */}

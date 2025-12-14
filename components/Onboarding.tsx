@@ -4,7 +4,7 @@ import React, { useRef, useState } from 'react';
 import { UserSettings } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 import { FireIcon, XIcon, SearchIcon, MicrowaveIcon, InductionIcon, GasStoveIcon, AirFryerIcon, OvenIcon, BlenderIcon } from './icons';
-import { COMMON_INGREDIENTS, getIngredientCategory, getIngredientTranslation, ALL_INGREDIENTS, INGREDIENT_CATEGORIES, getIngredientEmoji } from '../data/ingredients';
+import { COMMON_INGREDIENTS, getIngredientCategory, getIngredientTranslation, ALL_INGREDIENTS, INGREDIENT_CATEGORIES, getIngredientEmoji, findIngredientEnglishName } from '../data/ingredients';
 
 interface OnboardingProps {
   initialSettings: UserSettings;
@@ -24,10 +24,12 @@ const ProgressBar: React.FC<{ step: number; totalSteps: number }> = ({ step, tot
 
 const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack, skipIngredients = false }) => {
   const [step, setStep] = useState(1);
+  const normalizeAllergies = (items: string[]) => items.map(a => findIngredientEnglishName(a) || a);
   const mergedSettings: UserSettings = {
     nickname: '',
     profileImage: '',
-    ...initialSettings
+    ...initialSettings,
+    allergies: normalizeAllergies(initialSettings.allergies || [])
   };
   const [settings, setSettings] = useState<UserSettings>(mergedSettings);
   const [selectedInitialIngredients, setSelectedInitialIngredients] = useState<string[]>([]);
@@ -107,11 +109,15 @@ const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack
               {levels.map(level => {
                 const emojis = { Beginner: '🐣', Intermediate: '👨‍🍳', Advanced: '👑' };
                 return (
-                  <button key={level} onClick={() => setSettings({ ...settings, cookingLevel: level })} className={`w-full text-left p-4 border rounded-xl transition-colors flex items-center gap-4 ${settings.cookingLevel === level ? 'border-brand-primary bg-brand-light' : 'border-line-light bg-surface'}`}>
-                    <span className="text-3xl">{emojis[level]}</span>
-                    <div>
-                      <p className="font-bold text-lg">{t(level.toLowerCase() as any)}</p>
-                      <p className="text-sm text-text-secondary">{t((level.toLowerCase() + 'Desc') as any)}</p>
+                  <button
+                    key={level}
+                    onClick={() => setSettings({ ...settings, cookingLevel: level })}
+                    className={`w-full text-left p-4 border rounded-xl transition-colors flex items-center gap-4 items-start min-h-[96px] ${settings.cookingLevel === level ? 'border-brand-primary bg-brand-light' : 'border-line-light bg-surface'}`}
+                  >
+                    <span className="text-3xl leading-none">{emojis[level]}</span>
+                    <div className="space-y-1">
+                      <p className="font-bold text-lg leading-tight">{t(level.toLowerCase() as any)}</p>
+                      <p className="text-sm text-text-secondary leading-snug whitespace-normal break-words">{t((level.toLowerCase() + 'Desc') as any)}</p>
                     </div>
                   </button>
                 );
@@ -120,14 +126,22 @@ const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack
           </div>
         );
       case 2: // Allergies
-        const defaultAllergies: (keyof (typeof import('../i18n'))['translations']['en'])[] = ['egg', 'milk', 'nuts', 'shellfish', 'wheat', 'soy', 'fish'];
+        const defaultAllergies = [
+          { key: 'egg', name: 'Egg', emoji: '🥚' },
+          { key: 'milk', name: 'Milk', emoji: '🥛' },
+          { key: 'nuts', name: 'Nuts', emoji: '🥜' },
+          { key: 'shellfish', name: 'Shellfish', emoji: '🦐' },
+          { key: 'wheat', name: 'Wheat', emoji: '🍞' },
+          { key: 'soy', name: 'Soy', emoji: '🫘' },
+          { key: 'fish', name: 'Fish', emoji: '🐟' }
+        ];
 
-        const handleAllergyToggle = (allergy: string) => {
+        const handleAllergyToggle = (allergyEnglishName: string) => {
           const currentAllergies = settings.allergies;
-          if (currentAllergies.includes(allergy)) {
-            setSettings({ ...settings, allergies: currentAllergies.filter(a => a !== allergy) });
+          if (currentAllergies.includes(allergyEnglishName)) {
+            setSettings({ ...settings, allergies: currentAllergies.filter(a => a !== allergyEnglishName) });
           } else {
-            setSettings({ ...settings, allergies: [...currentAllergies, allergy] });
+            setSettings({ ...settings, allergies: [...currentAllergies, allergyEnglishName] });
           }
         };
 
@@ -142,23 +156,15 @@ const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack
 
           const lowerCaseValue = value.toLowerCase();
           const filtered = ALL_INGREDIENTS.filter(
-            ing => (ing.en.toLowerCase().includes(lowerCaseValue) || ing.ko.toLowerCase().includes(lowerCaseValue)) && !settings.allergies.includes(getIngredientTranslation(ing.en, language))
+            ing => (ing.en.toLowerCase().includes(lowerCaseValue) || ing.ko.toLowerCase().includes(lowerCaseValue)) && !settings.allergies.includes(ing.en)
           ).slice(0, 10);
           setAllergySuggestions(filtered);
         };
 
         const handleAllergySelect = (englishName: string) => {
-          const translatedName = getIngredientTranslation(englishName, language);
-          // We store the translated name or english name? The current system seems to use translated names for the buttons, 
-          // but keeping English identifiers might be safer. 
-          // Looking at the existing code: `t(allergyKey)` is passed to toggle. 
-          // `settings.allergies` stores what is passed to toggle. 
-          // If we want consistency, we should store what matches the display.
-          // However, mixing translated strings in storage is risky. 
-          // For now, I will match the existing pattern: store what the user sees/selects.
-
-          if (!settings.allergies.includes(translatedName)) {
-            handleAllergyToggle(translatedName);
+          const canonical = findIngredientEnglishName(englishName) || englishName;
+          if (!settings.allergies.includes(canonical)) {
+            handleAllergyToggle(canonical);
           }
           setAllergySearch('');
           setAllergySuggestions([]);
@@ -193,33 +199,26 @@ const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack
             </div>
 
             <div className="flex flex-wrap gap-3">
-              {defaultAllergies.map(allergyKey => {
-                const allergyEmojis: Record<string, string> = {
-                  egg: '🥚', milk: '🥛', nuts: '🥜', shellfish: '🦐', wheat: '🍞', soy: '🫘', fish: '🐟'
-                };
-                const translated = t(allergyKey);
+              {defaultAllergies.map(allergy => {
+                const translated = t(allergy.key as any);
                 return (
-                  <button key={allergyKey} onClick={() => handleAllergyToggle(translated)} className={`px-4 py-2 border rounded-full transition-colors flex items-center gap-2 ${settings.allergies.includes(translated) ? 'border-brand-primary bg-brand-light' : 'border-line-light bg-surface'}`}>
-                    <span>{allergyEmojis[allergyKey]}</span>
+                  <button key={allergy.key} onClick={() => handleAllergyToggle(allergy.name)} className={`px-4 py-2 border rounded-full transition-colors flex items-center gap-2 ${settings.allergies.includes(allergy.name) ? 'border-brand-primary bg-brand-light' : 'border-line-light bg-surface'}`}>
+                    <span>{allergy.emoji}</span>
                     <span>{translated}</span>
                   </button>
                 );
               })}
 
               {/* Render selected allergies that are NOT in default list */}
-              {settings.allergies.filter(a => !defaultAllergies.map(k => t(k)).includes(a)).map(allergyName => {
-                // Try to find emoji if possible, otherwise generic
-                // Note: allergyName here is likely translated if we followed logic above. 
-                // Finding original english name to get emoji is hard if we only have translated.
-                // Ideally we should refactor to store keys. But to fix this quickly:
-                // We can search ALL_INGREDIENTS for name match.
-                const foundIng = ALL_INGREDIENTS.find(i => getIngredientTranslation(i.en, language) === allergyName);
+              {settings.allergies.filter(a => !defaultAllergies.some(d => d.name === a)).map(allergyName => {
+                const foundIng = ALL_INGREDIENTS.find(i => i.en === allergyName);
                 const emoji = foundIng ? foundIng.emoji : '⚠️';
+                const label = foundIng ? getIngredientTranslation(foundIng.en, language) : allergyName;
 
                 return (
                   <button key={allergyName} onClick={() => handleAllergyToggle(allergyName)} className="px-4 py-2 border border-brand-primary bg-brand-light rounded-full transition-colors flex items-center gap-2 animate-fade-in">
                     <span>{emoji}</span>
-                    <span>{allergyName}</span>
+                    <span>{label}</span>
                     <XIcon className="w-4 h-4 ml-1" />
                   </button>
                 );
@@ -229,11 +228,11 @@ const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack
         );
       case 3: // Spiciness
         const spicinessLevels = [
-          { level: 1, labelKey: "mild" },
-          { level: 2, labelKey: "medium" },
-          { level: 3, labelKey: "spicy" },
-          { level: 4, labelKey: "verySpicy" },
-          { level: 5, labelKey: "extremelySpicy" },
+          { level: 1, labelKey: "mild", color: 'text-green-400', size: 'w-7 h-7' },
+          { level: 2, labelKey: "medium", color: 'text-lime-500', size: 'w-8 h-8' },
+          { level: 3, labelKey: "spicy", color: 'text-orange-400', size: 'w-9 h-9' },
+          { level: 4, labelKey: "verySpicy", color: 'text-red-500', size: 'w-10 h-10' },
+          { level: 5, labelKey: "extremelySpicy", color: 'text-red-700', size: 'w-11 h-11' },
         ] as const;
 
         return (
@@ -243,7 +242,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack
             <div className="flex justify-center items-center gap-4">
               {spicinessLevels.map(s => (
                 <button key={s.level} onClick={() => setSettings(prev => ({ ...prev, spicinessPreference: s.level }))}>
-                  <FireIcon className={`w-8 h-8 transition-colors ${settings.spicinessPreference >= s.level ? 'text-brand-primary' : 'text-line-light'}`} isFilled={settings.spicinessPreference >= s.level} />
+                  <FireIcon className={`${s.size} transition-all ${settings.spicinessPreference >= s.level ? s.color : 'text-line-light'} ${settings.spicinessPreference === s.level ? 'scale-110' : ''}`} isFilled={settings.spicinessPreference >= s.level} />
                 </button>
               ))}
             </div>
@@ -459,20 +458,22 @@ const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background p-6">
-      <div className="flex items-center justify-between mb-4">
+    <div className="flex flex-col h-[100dvh] bg-background">
+      <div className="flex items-center justify-between p-6 pb-4 flex-shrink-0">
         <button onClick={step === 1 ? onBack : handlePrev} className="text-text-primary text-lg">
           ← {t('previous')}
         </button>
         <span className="text-text-secondary">{step}/{totalSteps}</span>
       </div>
-      <ProgressBar step={step} totalSteps={totalSteps} />
+      <div className="px-6 flex-shrink-0">
+        <ProgressBar step={step} totalSteps={totalSteps} />
+      </div>
 
-      <div className="flex-grow my-8 overflow-y-hidden">
+      <div className="flex-1 overflow-y-auto px-6 py-6">
         {renderStep()}
       </div>
 
-      <div className="mt-auto">
+      <div className="p-6 pt-4 flex-shrink-0">
         {step < totalSteps ? (
           <button onClick={handleNext} className="w-full bg-brand-primary text-white font-bold py-4 rounded-xl">
             {t('next')}

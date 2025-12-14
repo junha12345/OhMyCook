@@ -22,7 +22,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin }) => {
   const { t } = useLanguage();
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-between p-6">
+    <div className="h-[100dvh] bg-background flex flex-col items-center justify-between p-6 overflow-y-auto">
       <div className="w-full flex-grow flex flex-col items-center justify-center space-y-8">
         <div className="w-full max-w-sm aspect-square rounded-full overflow-hidden shadow-xl border-4 border-surface relative">
           {/* Using the image we added */}

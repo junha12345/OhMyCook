@@ -149,18 +149,18 @@ const AIChef: React.FC<AIChefProps> = ({
 
   return (
     <div className={`flex flex-col h-screen bg-background ${!showBack ? 'pb-24' : ''}`}>
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-surface">
-        <div className="flex items-center gap-2 flex-1">
+      <div className="flex items-center justify-between px-4 py-3 border-b bg-surface gap-2">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
           {showBack && (
-            <button onClick={handleBack} className="text-text-primary text-lg">
+            <button onClick={handleBack} className="text-text-primary text-lg flex-shrink-0">
               ← {t('back')}
             </button>
           )}
-          <h2 className="text-lg font-bold text-text-primary truncate">{headerTitle}</h2>
+          <h2 className="text-sm sm:text-base font-bold text-text-primary truncate">{headerTitle}</h2>
         </div>
         <button 
           onClick={() => setShowHistory(!showHistory)}
-          className="px-3 py-1.5 text-sm bg-brand-primary text-white rounded-lg hover:bg-brand-dark transition-colors"
+          className="px-3 py-1.5 text-sm bg-brand-primary text-white rounded-lg hover:bg-brand-dark transition-colors flex-shrink-0"
         >
           {showHistory ? t('hideHistory') || 'Hide' : t('showHistory') || 'History'}
         </button>
@@ -169,7 +169,8 @@ const AIChef: React.FC<AIChefProps> = ({
       <div className="flex-1 overflow-y-auto">
         <div className="p-4 space-y-4">
           {/* History List View */}
-          {showHistory && historyList.length > 0 && (
+          {showHistory && (
+            historyList.length > 0 ? (
             <div className="mb-6 space-y-2">
               <h3 className="text-sm font-bold text-text-primary mb-3">{t('chatHistoryList') || '대화 기록'}</h3>
               {historyList.map(hist => (
@@ -200,6 +201,12 @@ const AIChef: React.FC<AIChefProps> = ({
                 </button>
               ))}
             </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-text-secondary">{t('noChatHistory') || '아직 대화 내역이 없습니다.'}</p>
+                <p className="text-sm text-text-secondary mt-2">{t('startChatting') || '질문을 시작해보세요!'}</p>
+              </div>
+            )
           )}
 
           {/* Suggested Questions - scrollable */}

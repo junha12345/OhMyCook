@@ -70,6 +70,23 @@ const AppContent: React.FC = () => {
       Boolean(user.user_metadata?.hasCompletedOnboarding),
   }), [onboardingStatus]);
 
+  const handleLogin = useCallback((user: User, shouldNavigate: boolean = true) => {
+    const hasCompletedOnboarding = onboardingStatus[user.id] ?? user.hasCompletedOnboarding;
+    const normalizedUser = { ...user, hasCompletedOnboarding };
+
+    setCurrentUser(normalizedUser);
+    setAuthLoading(false);
+
+    if (!shouldNavigate) return;
+
+    if (hasCompletedOnboarding) {
+      setCurrentView('tab');
+      setCurrentTab('cook');
+    } else {
+      setCurrentView('onboarding');
+    }
+  }, [onboardingStatus]);
+
   useEffect(() => {
     setIsInitialLoad(false);
   }, []);
@@ -199,23 +216,6 @@ const AppContent: React.FC = () => {
       }
     });
   };
-
-  const handleLogin = useCallback((user: User, shouldNavigate: boolean = true) => {
-    const hasCompletedOnboarding = onboardingStatus[user.id] ?? user.hasCompletedOnboarding;
-    const normalizedUser = { ...user, hasCompletedOnboarding };
-
-    setCurrentUser(normalizedUser);
-    setAuthLoading(false);
-
-    if (!shouldNavigate) return;
-
-    if (hasCompletedOnboarding) {
-      setCurrentView('tab');
-      setCurrentTab('cook');
-    } else {
-      setCurrentView('onboarding');
-    }
-  }, [onboardingStatus]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

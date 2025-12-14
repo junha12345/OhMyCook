@@ -26,6 +26,7 @@ const Community: React.FC<CommunityProps> = ({
   const [selectedRecipeName, setSelectedRecipeName] = useState<string>(savedRecipes[0]?.recipeName || '');
   const [note, setNote] = useState('');
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
+  const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
 
   useEffect(() => {
     if (savedRecipes.length > 0 && !selectedRecipeName) {
@@ -64,6 +65,45 @@ const Community: React.FC<CommunityProps> = ({
   };
 
   const userInitial = currentUser?.email?.[0]?.toUpperCase() || '?';
+
+  const renderRecipeDetails = (recipe: Recipe) => {
+    return (
+      <div className="mt-3 space-y-3">
+        <div className="grid grid-cols-2 gap-2 text-xs text-text-secondary">
+          <span className="font-semibold text-text-primary">{t('cookTime')}:</span>
+          <span>{recipe.cookTime} min</span>
+          <span className="font-semibold text-text-primary">{t('servings')}:</span>
+          <span>{recipe.servings}</span>
+          <span className="font-semibold text-text-primary">{t('difficulty')}:</span>
+          <span>{recipe.difficulty}</span>
+          <span className="font-semibold text-text-primary">{t('spiciness')}:</span>
+          <span>{recipe.spiciness}</span>
+        </div>
+
+        <div>
+          <p className="font-semibold text-text-primary mb-1">{t('ingredients')}</p>
+          <ul className="list-disc list-inside text-sm text-text-secondary space-y-1">
+            {recipe.ingredients.map((item, index) => (
+              <li key={`${recipe.recipeName}-ingredient-${index}`}>{item}</li>
+            ))}
+          </ul>
+        </div>
+
+        <div>
+          <p className="font-semibold text-text-primary mb-1">{t('instructions')}</p>
+          {recipe.instructions.length > 0 ? (
+            <ol className="list-decimal list-inside text-sm text-text-secondary space-y-1">
+              {recipe.instructions.map((step, index) => (
+                <li key={`${recipe.recipeName}-instruction-${index}`}>{step}</li>
+              ))}
+            </ol>
+          ) : (
+            <p className="text-sm text-text-secondary">{t('noInstructions')}</p>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -133,10 +173,14 @@ const Community: React.FC<CommunityProps> = ({
             {sortedPosts.map((post) => {
               const hasLiked = currentUser ? post.likes.includes(currentUser.email) : false;
               const commentValue = commentInputs[post.id] || '';
+              const isExpanded = expandedPostId === post.id;
               return (
                 <div key={post.id} className="bg-surface p-4 rounded-2xl border border-line-light shadow-subtle">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setExpandedPostId((prev) => (prev === post.id ? null : post.id))}
+                      className="flex items-center gap-3 text-left focus:outline-none"
+                    >
                       <div className="w-10 h-10 rounded-full bg-brand-primary/10 text-brand-dark flex items-center justify-center font-semibold">
                         {post.authorName?.[0]?.toUpperCase() || post.authorEmail[0].toUpperCase()}
                       </div>
@@ -144,9 +188,12 @@ const Community: React.FC<CommunityProps> = ({
                         <p className="font-semibold text-text-primary">{post.authorName || post.authorEmail}</p>
                         <p className="text-xs text-text-secondary">{formatDate(post.createdAt)}</p>
                       </div>
-                    </div>
+                    </button>
                     <button
-                      onClick={() => currentUser && onToggleLike(post.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        currentUser && onToggleLike(post.id);
+                      }}
                       className={`flex items-center gap-1 px-3 py-1 rounded-full border ${hasLiked ? 'bg-brand-primary text-white border-brand-primary' : 'border-line-light text-text-secondary'}`}
                     >
                       <HeartIcon className={`w-4 h-4 ${hasLiked ? 'fill-current' : ''}`} />
@@ -154,51 +201,65 @@ const Community: React.FC<CommunityProps> = ({
                     </button>
                   </div>
 
-                  <div className="mt-4 flex gap-3">
+                  <button
+                    onClick={() => setExpandedPostId((prev) => (prev === post.id ? null : post.id))}
+                    className="w-full text-left mt-4 flex gap-3 focus:outline-none"
+                  >
                     <ImageWithFallback
                       src={getImageUrl(post.recipe, 200)}
                       alt={post.recipe.recipeName}
-                      className="w-24 h-24 rounded-xl object-cover"
+                      className="w-24 h-24 rounded-xl object-cover flex-shrink-0"
                     />
                     <div className="flex-1">
-                      <p className="font-bold text-lg text-text-primary">{post.recipe.recipeName}</p>
-                      <p className="text-sm text-text-secondary line-clamp-2">{post.recipe.description}</p>
+                      <p className="font-bold text-lg text-text-primary flex items-center gap-2">
+                        {post.recipe.recipeName}
+                        <span className="text-xs font-semibold text-text-secondary bg-brand-primary/10 px-2 py-1 rounded-full">
+                          {post.comments.length} {t('comments')}
+                        </span>
+                      </p>
+                      <p className={`text-sm text-text-secondary ${isExpanded ? '' : 'line-clamp-2'}`}>{post.recipe.description}</p>
                       {post.note && <p className="text-sm text-text-primary mt-2">“{post.note}”</p>}
                     </div>
-                  </div>
+                  </button>
 
-                  <div className="mt-4">
-                    <div className="flex items-center gap-2 text-sm text-text-secondary font-semibold">
-                      <MessageCircleIcon className="w-4 h-4" />
-                      <span>
-                        {t('comments')} ({post.comments.length})
-                      </span>
-                    </div>
-                    <div className="space-y-2 mt-2">
-                      {post.comments.map((comment) => (
-                        <div key={comment.id} className="bg-brand-primary/5 p-2 rounded-lg">
-                          <p className="text-sm font-semibold text-text-primary">{comment.authorName || comment.authorEmail}</p>
-                          <p className="text-sm text-text-secondary">{comment.content}</p>
+                  {isExpanded && (
+                    <div className="mt-4">
+                      {renderRecipeDetails(post.recipe)}
+
+                      <div className="mt-4">
+                        <div className="flex items-center gap-2 text-sm text-text-secondary font-semibold">
+                          <MessageCircleIcon className="w-4 h-4" />
+                          <span>
+                            {t('comments')} ({post.comments.length})
+                          </span>
                         </div>
-                      ))}
-                    </div>
-                    {currentUser && (
-                      <div className="flex items-center gap-2 mt-3">
-                        <input
-                          value={commentValue}
-                          onChange={(e) => setCommentInputs((prev) => ({ ...prev, [post.id]: e.target.value }))}
-                          placeholder={t('commentPlaceholder') || ''}
-                          className="flex-1 bg-white border border-line-light rounded-full px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                        />
-                        <button
-                          onClick={() => handleSubmitComment(post.id)}
-                          className="p-2 rounded-full bg-brand-primary text-white shadow-subtle hover:shadow-md"
-                        >
-                          <SendIcon className="w-4 h-4" />
-                        </button>
+                        <div className="space-y-2 mt-2">
+                          {post.comments.map((comment) => (
+                            <div key={comment.id} className="bg-brand-primary/5 p-2 rounded-lg">
+                              <p className="text-sm font-semibold text-text-primary">{comment.authorName || comment.authorEmail}</p>
+                              <p className="text-sm text-text-secondary">{comment.content}</p>
+                            </div>
+                          ))}
+                        </div>
+                        {currentUser && (
+                          <div className="flex items-center gap-2 mt-3">
+                            <input
+                              value={commentValue}
+                              onChange={(e) => setCommentInputs((prev) => ({ ...prev, [post.id]: e.target.value }))}
+                              placeholder={t('commentPlaceholder') || ''}
+                              className="flex-1 bg-white border border-line-light rounded-full px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                            />
+                            <button
+                              onClick={() => handleSubmitComment(post.id)}
+                              className="p-2 rounded-full bg-brand-primary text-white shadow-subtle hover:shadow-md"
+                            >
+                              <SendIcon className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               );
             })}

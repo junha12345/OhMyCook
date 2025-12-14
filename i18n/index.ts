@@ -133,6 +133,8 @@ export const translations = {
     ingredients: 'Ingredients',
     missingIngredients: 'Missing Ingredients',
     instructions: 'Instructions',
+    cookTime: 'Cook Time',
+    noInstructions: 'No instructions provided yet.',
     // AI Chef
     aiChefTitle: 'AI Cooking Assistant',
     aiChefGreeting: 'Hello! Ask me anything about cooking. I can help with recipes, cooking methods, temperatures, alternative ingredients, and more.',
@@ -371,6 +373,8 @@ export const translations = {
     ingredients: '재료',
     missingIngredients: '없는 재료',
     instructions: '요리 방법',
+    cookTime: '조리 시간',
+    noInstructions: '등록된 조리 방법이 없습니다.',
     // AI Chef
     aiChefTitle: 'AI 요리 어시스턴트',
     aiChefGreeting: '안녕하세요! 요리 관련 질문이 있으시면 언제든 물어보세요. 재료 손질법, 조리 온도, 대체 재료 등 무엇이든 도와드립니다.',

@@ -34,6 +34,7 @@ export interface CommunityComment {
   id: string;
   authorEmail: string;
   authorName?: string;
+  authorProfileImage?: string;
   content: string;
   createdAt: string;
 }
@@ -42,6 +43,7 @@ export interface CommunityPost {
   id: string;
   authorEmail: string;
   authorName?: string;
+  authorProfileImage?: string;
   recipe: Recipe;
   note?: string;
   createdAt: string;

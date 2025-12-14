@@ -182,6 +182,7 @@ const AppContent: React.FC = () => {
       id: `post-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       authorEmail: currentUser.email,
       authorName: displayName,
+      authorProfileImage: settings.profileImage || undefined,
       recipe,
       note,
       createdAt: new Date().toISOString(),
@@ -215,6 +216,7 @@ const AppContent: React.FC = () => {
       id: `comment-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       authorEmail: currentUser.email,
       authorName: displayName,
+      authorProfileImage: settings.profileImage || undefined,
       content,
       createdAt: new Date().toISOString(),
     };
@@ -250,6 +252,7 @@ const AppContent: React.FC = () => {
         return (
           <Community
             currentUser={currentUser}
+            currentUserProfileImage={settings.profileImage}
             savedRecipes={savedRecipes}
             posts={communityPosts}
             onCreatePost={handleCreateCommunityPost}

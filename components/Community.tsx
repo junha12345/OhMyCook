@@ -7,6 +7,7 @@ import { HeartIcon, MessageCircleIcon, SendIcon, UsersIcon } from './icons';
 
 interface CommunityProps {
   currentUser: User | null;
+  currentUserProfileImage?: string;
   savedRecipes: Recipe[];
   posts: CommunityPost[];
   onCreatePost: (recipe: Recipe, note?: string) => void;
@@ -16,6 +17,7 @@ interface CommunityProps {
 
 const Community: React.FC<CommunityProps> = ({
   currentUser,
+  currentUserProfileImage,
   savedRecipes,
   posts,
   onCreatePost,
@@ -64,7 +66,25 @@ const Community: React.FC<CommunityProps> = ({
     return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   };
 
-  const userInitial = currentUser?.email?.[0]?.toUpperCase() || '?';
+  const renderAvatar = (
+    options: {
+      imageUrl?: string;
+      fallbackText: string;
+      size?: string;
+    }
+  ) => {
+    const { imageUrl, fallbackText, size = 'w-10 h-10' } = options;
+    if (imageUrl) {
+      return <img src={imageUrl} alt={fallbackText} className={`${size} rounded-full object-cover border border-line-light`} />;
+    }
+    return (
+      <div
+        className={`${size} rounded-full bg-brand-primary/10 text-brand-dark flex items-center justify-center font-semibold`}
+      >
+        {fallbackText}
+      </div>
+    );
+  };
 
   const renderRecipeDetails = (recipe: Recipe) => {
     return (
@@ -128,9 +148,10 @@ const Community: React.FC<CommunityProps> = ({
             ) : (
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-brand-primary text-white flex items-center justify-center font-bold">
-                    {userInitial}
-                  </div>
+                  {renderAvatar({
+                    imageUrl: currentUserProfileImage,
+                    fallbackText: currentUser?.email?.[0]?.toUpperCase() || '?',
+                  })}
                   <div className="flex-1">
                     <label className="text-xs text-text-secondary block mb-1">{t('selectRecipeToShare')}</label>
                     <select
@@ -181,9 +202,10 @@ const Community: React.FC<CommunityProps> = ({
                       onClick={() => setExpandedPostId((prev) => (prev === post.id ? null : post.id))}
                       className="flex items-center gap-3 text-left focus:outline-none"
                     >
-                      <div className="w-10 h-10 rounded-full bg-brand-primary/10 text-brand-dark flex items-center justify-center font-semibold">
-                        {post.authorName?.[0]?.toUpperCase() || post.authorEmail[0].toUpperCase()}
-                      </div>
+                      {renderAvatar({
+                        imageUrl: post.authorProfileImage,
+                        fallbackText: post.authorName?.[0]?.toUpperCase() || post.authorEmail[0].toUpperCase(),
+                      })}
                       <div>
                         <p className="font-semibold text-text-primary">{post.authorName || post.authorEmail}</p>
                         <p className="text-xs text-text-secondary">{formatDate(post.createdAt)}</p>
@@ -235,9 +257,16 @@ const Community: React.FC<CommunityProps> = ({
                         </div>
                         <div className="space-y-2 mt-2">
                           {post.comments.map((comment) => (
-                            <div key={comment.id} className="bg-brand-primary/5 p-2 rounded-lg">
-                              <p className="text-sm font-semibold text-text-primary">{comment.authorName || comment.authorEmail}</p>
-                              <p className="text-sm text-text-secondary">{comment.content}</p>
+                            <div key={comment.id} className="bg-brand-primary/5 p-2 rounded-lg flex gap-2 items-start">
+                              {renderAvatar({
+                                imageUrl: comment.authorProfileImage,
+                                fallbackText: comment.authorName?.[0]?.toUpperCase() || comment.authorEmail[0].toUpperCase(),
+                                size: 'w-8 h-8',
+                              })}
+                              <div>
+                                <p className="text-sm font-semibold text-text-primary">{comment.authorName || comment.authorEmail}</p>
+                                <p className="text-sm text-text-secondary">{comment.content}</p>
+                              </div>
                             </div>
                           ))}
                         </div>

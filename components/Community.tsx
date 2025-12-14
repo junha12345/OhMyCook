@@ -237,6 +237,7 @@ const Community: React.FC<CommunityProps> = ({
                       className={`flex items-center gap-1 px-3 py-1 rounded-full border ${hasLiked ? 'bg-brand-primary text-white border-brand-primary' : 'border-line-light text-text-secondary'}`}
                     >
                       <HeartIcon className={`w-4 h-4 ${hasLiked ? 'fill-current' : ''}`} />
+                      <span className="text-sm font-semibold">{post.likes.length}</span>
                     </button>
                   </div>
 

@@ -12,7 +12,6 @@ interface CommunityProps {
   posts: CommunityPost[];
   onCreatePost: (recipe: Recipe, note?: string) => void;
   onToggleLike: (postId: string) => void;
-  onToggleLike: (postId: string) => void;
   onAddComment: (postId: string, content: string) => void;
   onDeletePost: (postId: string) => void;
 }
@@ -22,8 +21,6 @@ const Community: React.FC<CommunityProps> = ({
   currentUserProfileImage,
   savedRecipes,
   posts,
-  onCreatePost,
-  onToggleLike,
   onCreatePost,
   onToggleLike,
   onAddComment,

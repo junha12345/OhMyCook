@@ -132,41 +132,6 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const fetchCommunityPosts = async () => {
-    const { data, error } = await supabase
-      .from('community_posts')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error("Error fetching posts:", error);
-      return;
-    }
-
-    if (data) {
-      const mappedPosts: CommunityPost[] = data.map(p => ({
-        id: p.id,
-        authorEmail: 'hidden', // DB might not return email if not joined, assume hidden or join profiles
-        authorName: 'Chef', // We might need to join profiles to get names. For now simplified.
-        // Logic improvement: we should join with profiles table to get nickname/image
-        // For now, let's keep it simple or fetch separately. 
-        // Actually, let's try to select author_id and maybe we can fetch profile later?
-        // Or better:
-        // .select('*, profiles(nickname, profile_image)')
-        // But let's assume standard structure first.
-        recipe: p.recipe,
-        note: p.note,
-        createdAt: p.created_at,
-        likes: p.likes || [],
-        comments: [] // We need to fetch comments separately or join
-      }));
-
-      // Enhanced fetch with joins if possible, but keeping it simple first to avoid heavy join logic without types
-      // Let's rely on simple fetch first.
-      setCommunityPosts(mappedPosts);
-    }
-  };
-
   // Improved fetch with Joins
   // Improved fetch with Manual Joins to avoid schema relationship issues
   const fetchCommunityPostsDetailed = async () => {

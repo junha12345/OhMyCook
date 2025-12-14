@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { UserSettings, Ingredient, ShoppingListItem, Recipe, User, ChatMessage, CommunityPost } from './types';
@@ -16,6 +16,8 @@ import LandingPage from './components/LandingPage';
 import BottomNavigation from './components/BottomNavigation';
 import Profile from './components/Profile';
 import PageTransition from './components/PageTransition';
+import { supabase } from './services/supabaseClient';
+import type { User as SupabaseAuthUser } from '@supabase/supabase-js';
 
 const defaultSettings: UserSettings = {
   cookingLevel: 'Beginner',
@@ -34,8 +36,8 @@ type View = 'tab' | 'onboarding' | 'recommendations' | 'chat' | 'shoppingList' |
 
 // Main App Content Component
 const AppContent: React.FC = () => {
-  const [users, setUsers] = useLocalStorage<User[]>('ohmycook-users', []);
-  const [currentUser, setCurrentUser] = useLocalStorage<User | null>('ohmycook-currentUser', null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [onboardingStatus, setOnboardingStatus] = useLocalStorage<Record<string, boolean>>('ohmycook-onboarding-status', {});
 
   const userStorageSuffix = currentUser?.email ?? 'guest';
 
@@ -56,12 +58,62 @@ const AppContent: React.FC = () => {
   const [chatOpenedFromRecipe, setChatOpenedFromRecipe] = useState<Recipe | null>(null);
   const [openedRecipeModal, setOpenedRecipeModal] = useState<Recipe | null>(null);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [authLoading, setAuthLoading] = useState(true);
 
   const { language, t } = useLanguage();
+
+  const mapSupabaseUserToAppUser = useCallback((user: SupabaseAuthUser): User => ({
+    id: user.id,
+    email: user.email ?? '',
+    hasCompletedOnboarding:
+      onboardingStatus[user.id] ??
+      (user.email ? onboardingStatus[user.email] : undefined) ??
+      Boolean(user.user_metadata?.hasCompletedOnboarding),
+  }), [onboardingStatus]);
 
   useEffect(() => {
     setIsInitialLoad(false);
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const initializeSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (!isMounted) return;
+
+      if (error) {
+        console.error('Failed to get Supabase session', error);
+      }
+
+      if (data.session?.user) {
+        const appUser = mapSupabaseUserToAppUser(data.session.user);
+        handleLogin(appUser);
+      } else {
+        setAuthLoading(false);
+      }
+    };
+
+    initializeSession();
+
+    const { data: authSubscription } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) return;
+
+      if (session?.user) {
+        const appUser = mapSupabaseUserToAppUser(session.user);
+        handleLogin(appUser, event === 'SIGNED_IN');
+      } else {
+        setCurrentUser(null);
+        setCurrentView('tab');
+        setAuthLoading(false);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      authSubscription?.subscription.unsubscribe();
+    };
+  }, [mapSupabaseUserToAppUser, handleLogin]);
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -115,12 +167,11 @@ const AppContent: React.FC = () => {
 
     // Mark onboarding as complete for the current user
     if (currentUser && !currentUser.hasCompletedOnboarding) {
-      const updatedUsers = users.map(user =>
-        user.email === currentUser.email
-          ? { ...user, hasCompletedOnboarding: true }
-          : user
-      );
-      setUsers(updatedUsers);
+      setOnboardingStatus(prev => ({
+        ...prev,
+        [currentUser.id]: true,
+        [currentUser.email]: true,
+      }));
       setCurrentUser(prevUser => (prevUser ? { ...prevUser, hasCompletedOnboarding: true } : null));
     }
 
@@ -150,22 +201,25 @@ const AppContent: React.FC = () => {
     });
   };
 
-  const handleLogin = (user: User) => {
-    setCurrentUser(user);
-    if (user.hasCompletedOnboarding) {
+  const handleLogin = useCallback((user: User, shouldNavigate: boolean = true) => {
+    const hasCompletedOnboarding = onboardingStatus[user.id] ?? user.hasCompletedOnboarding;
+    const normalizedUser = { ...user, hasCompletedOnboarding };
+
+    setCurrentUser(normalizedUser);
+    setAuthLoading(false);
+
+    if (!shouldNavigate) return;
+
+    if (hasCompletedOnboarding) {
       setCurrentView('tab');
       setCurrentTab('cook');
     } else {
       setCurrentView('onboarding');
     }
-  };
+  }, [onboardingStatus]);
 
-  const handleSignup = (newUser: Pick<User, 'email' | 'password'>) => {
-    setUsers(prev => [...prev, { ...newUser, hasCompletedOnboarding: false }]);
-    setCurrentView('auth');
-  };
-
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setCurrentUser(null);
     setCurrentView('tab');
     setCurrentTab('cook'); // Or stay on profile? Better to go to home/auth.
@@ -276,7 +330,7 @@ const AppContent: React.FC = () => {
   };
 
   const renderView = () => {
-    if (isInitialLoad) return <div className="flex justify-center items-center h-screen"><Spinner /></div>;
+    if (isInitialLoad || authLoading) return <div className="flex justify-center items-center h-screen"><Spinner /></div>;
 
     // Global Auth Check for main flows if needed, but LandingPage handles guests.
     if (!currentUser && currentView !== 'auth' && currentView !== 'onboarding') {
@@ -295,7 +349,7 @@ const AppContent: React.FC = () => {
             case 'auth':
               return (
                 <PageTransition key="auth" direction={navigationDirection}>
-                  <Auth onLogin={handleLogin} onSignup={handleSignup} users={users} onBack={() => { setNavigationDirection('right'); setCurrentView('tab'); setCurrentTab('cook'); }} initialMode={authMode} />
+                  <Auth onAuthSuccess={handleLogin} onBack={() => { setNavigationDirection('right'); setCurrentView('tab'); setCurrentTab('cook'); }} initialMode={authMode} />
                 </PageTransition>
               );
             case 'onboarding':

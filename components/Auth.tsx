@@ -108,9 +108,9 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack, initialMode = 'login
           </button>
 
           {!supabaseReady && (
-            <p className="text-xs text-text-secondary text-center mt-2">
-              Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (build-time env or a runtime window/meta value) to enable Google
-              sign-in.
+            <p className="text-xs text-text-secondary text-center mt-2 leading-relaxed">
+              Google 로그인을 사용하려면 Supabase 환경 변수가 필요합니다. <code>VITE_SUPABASE_URL</code>과
+              <code>VITE_SUPABASE_ANON_KEY</code>을(.env 혹은 런타임 window/meta 설정) 추가해 주세요.
             </p>
           )}
 

@@ -129,6 +129,9 @@ const AppContent: React.FC = () => {
       }
     } catch (error) {
       console.error('Profile fetch unexpected error:', error);
+    } finally {
+      // Only set initial load to false after profile fetch completes
+      setIsInitialLoad(false);
     }
   };
 
@@ -222,8 +225,8 @@ const AppContent: React.FC = () => {
       } else {
         setCurrentUser(null);
         setSettings(defaultSettings);
+        setIsInitialLoad(false);
       }
-      setIsInitialLoad(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {

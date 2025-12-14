@@ -662,7 +662,7 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="h-[100dvh] overflow-hidden bg-background text-text-primary font-sans transition-colors duration-300 relative w-full">
+    <div className="h-[100dvh] overflow-hidden bg-background text-text-primary font-sans transition-colors duration-300 relative w-full pt-[env(safe-area-inset-top)]">
       {renderView()}
     </div>
   );

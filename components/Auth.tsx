@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { User } from '../types';
 import { useLanguage } from '../context/LanguageContext';
-import { LogoIcon } from './icons';
+import { LogoIcon, GoogleIcon } from './icons';
+import { supabase } from '../services/supabaseClient';
 
 interface AuthProps {
   users: User[];
@@ -39,6 +40,20 @@ const Auth: React.FC<AuthProps> = ({ users, onLogin, onSignup, onBack, initialMo
       }
       setMessage(t('signupSuccess'));
       setIsLoginMode(true); // Switch to login after successful signup
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) throw error;
+    } catch (error: any) {
+      setError(error.message || t('loginFailed'));
     }
   };
 
@@ -85,6 +100,16 @@ const Auth: React.FC<AuthProps> = ({ users, onLogin, onSignup, onBack, initialMo
             </button>
           </div>
         </form>
+
+        <div className="mt-4">
+          <button
+            onClick={handleGoogleLogin}
+            className="w-full bg-white border border-gray-300 text-text-primary font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-3 hover:bg-gray-50 transition-colors"
+          >
+            <GoogleIcon />
+            {t('continueWithGoogle') || "Continue with Google"}
+          </button>
+        </div>
 
         <div className="text-center mt-6">
           <button onClick={() => setIsLoginMode(!isLoginMode)} className="text-sm text-brand-primary font-semibold">

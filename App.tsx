@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { UserSettings, Ingredient, ShoppingListItem, Recipe, User, ChatMessage, RecipeFilters } from './types';
+import { UserSettings, Ingredient, ShoppingListItem, Recipe, User, ChatMessage, CommunityPost } from './types';
 import IngredientManager from './components/IngredientManager';
 import RecipeRecommendations from './components/RecipeRecommendations';
 import AIChef from './components/AIChef';
-import PopularRecipes from './components/PopularRecipes';
+import Community from './components/Community';
 import Onboarding from './components/Onboarding';
 import ShoppingList from './components/ShoppingList';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
@@ -16,6 +16,7 @@ import LandingPage from './components/LandingPage';
 import BottomNavigation from './components/BottomNavigation';
 import Profile from './components/Profile';
 import PageTransition from './components/PageTransition';
+import { supabase } from './services/supabaseClient';
 
 const defaultSettings: UserSettings = {
   cookingLevel: 'Beginner',
@@ -29,7 +30,7 @@ const defaultSettings: UserSettings = {
   profileImage: '',
 };
 
-type Tab = 'cook' | 'chat' | 'popular' | 'profile';
+type Tab = 'cook' | 'chat' | 'community' | 'profile';
 type View = 'tab' | 'onboarding' | 'recommendations' | 'chat' | 'shoppingList' | 'savedRecipes' | 'auth';
 
 // Main App Content Component
@@ -55,6 +56,7 @@ const AppContent: React.FC = () => {
   const [cachedRecipes, setCachedRecipes] = useLocalStorage<Recipe[]>(`ohmycook-recipes-${userStorageSuffix}`, []);
   const [cachedRecipeFilters, setCachedRecipeFilters] = useLocalStorage<RecipeFilters>(`ohmycook-recipefilters-${userStorageSuffix}`, defaultRecipeFilters);
   const [cachedPriorityIngredients, setCachedPriorityIngredients] = useLocalStorage<string[]>(`ohmycook-priority-${userStorageSuffix}`, []);
+  const [communityPosts, setCommunityPosts] = useLocalStorage<CommunityPost[]>('ohmycook-community-posts', []);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Navigation State
@@ -73,6 +75,43 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     setIsInitialLoad(false);
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user?.email) {
+        const email = session.user.email;
+        // Check if user exists in local storage
+        setUsers(prevUsers => {
+          const existingUser = prevUsers.find(u => u.email === email);
+          if (existingUser) {
+            setCurrentUser(existingUser);
+            if (existingUser.hasCompletedOnboarding) {
+              setCurrentView('tab');
+              setCurrentTab('cook');
+            } else {
+              setCurrentView('onboarding');
+            }
+            return prevUsers;
+          } else {
+            // New user from social auth
+            const newUser: User = {
+              email,
+              hasCompletedOnboarding: false,
+            };
+            setCurrentUser(newUser); // Will trigger onboarding if not completed
+            setCurrentView('onboarding'); // Force onboarding for new Google users
+            return [...prevUsers, newUser];
+          }
+        });
+      } else if (event === 'SIGNED_OUT') {
+        setCurrentUser(null);
+        setCurrentView('tab');
+        setCurrentTab('cook');
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -189,13 +228,68 @@ const AppContent: React.FC = () => {
     setCachedRecipes(prev => prev.map(r => r.recipeName === updatedRecipe.recipeName ? { ...r, ...updatedRecipe } : r));
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setCurrentUser(null);
     setCurrentView('tab');
     setCurrentTab('cook'); // Or stay on profile? Better to go to home/auth.
     // If we want to force login on home screen, we can do that in renderTab.
     // But current logic allows guest browsing for some parts?
     // Actually, LandingPage is shown if !currentUser.
+  };
+
+  const handleCreateCommunityPost = (recipe: Recipe, note?: string) => {
+    if (!currentUser) return;
+
+    const displayName = settings.nickname || currentUser.email.split('@')[0];
+    const newPost: CommunityPost = {
+      id: `post-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      authorEmail: currentUser.email,
+      authorName: displayName,
+      authorProfileImage: settings.profileImage || undefined,
+      recipe,
+      note,
+      createdAt: new Date().toISOString(),
+      likes: [],
+      comments: [],
+    };
+
+    setCommunityPosts((prev) => [newPost, ...prev]);
+  };
+
+  const handleToggleCommunityLike = (postId: string) => {
+    if (!currentUser) return;
+    setCommunityPosts((prev) =>
+      prev.map((post) => {
+        if (post.id !== postId) return post;
+        const hasLiked = post.likes.includes(currentUser.email);
+        return {
+          ...post,
+          likes: hasLiked
+            ? post.likes.filter((email) => email !== currentUser.email)
+            : [...post.likes, currentUser.email],
+        };
+      })
+    );
+  };
+
+  const handleAddCommunityComment = (postId: string, content: string) => {
+    if (!currentUser || !content.trim()) return;
+    const displayName = settings.nickname || currentUser.email.split('@')[0];
+    const newComment = {
+      id: `comment-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      authorEmail: currentUser.email,
+      authorName: displayName,
+      authorProfileImage: settings.profileImage || undefined,
+      content,
+      createdAt: new Date().toISOString(),
+    };
+
+    setCommunityPosts((prev) =>
+      prev.map((post) =>
+        post.id === postId ? { ...post, comments: [...post.comments, newComment] } : post
+      )
+    );
   };
 
   const renderTab = () => {
@@ -236,18 +330,21 @@ const AppContent: React.FC = () => {
             }}
           />
         );
-      case 'popular':
+      case 'community':
         return (
           <PopularRecipes
             onBack={() => { }} // No back needed for main tab
             onLogoClick={() => { setCurrentView('tab'); setCurrentTab('cook'); }}
             shoppingList={shoppingList}
             onToggleShoppingListItem={handleToggleShoppingListItem}
+          <Community
+            currentUser={currentUser}
+            currentUserProfileImage={settings.profileImage}
             savedRecipes={savedRecipes}
-            onToggleSaveRecipe={handleToggleSaveRecipe}
-            onStartChat={handleStartChat}
-            initialOpenedRecipe={openedRecipeModal}
-            onRecipeModalChange={setOpenedRecipeModal}
+            posts={communityPosts}
+            onCreatePost={handleCreateCommunityPost}
+            onToggleLike={handleToggleCommunityLike}
+            onAddComment={handleAddCommunityComment}
           />
         );
       case 'profile':

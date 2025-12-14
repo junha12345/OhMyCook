@@ -1,9 +1,9 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChefHatIcon, TrendingUpIcon, ProfileIcon, ChatBubbleIcon, FridgeIcon } from './icons';
+import { ProfileIcon, ChatBubbleIcon, FridgeIcon, UsersIcon } from './icons';
 import { useLanguage } from '../context/LanguageContext';
 
-type Tab = 'cook' | 'chat' | 'popular' | 'profile';
+type Tab = 'cook' | 'chat' | 'community' | 'profile';
 
 interface BottomNavigationProps {
     currentTab: Tab;
@@ -17,7 +17,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ currentTab, onTabCh
         { id: 'cook', icon: FridgeIcon, label: t('myFridge') || 'Fridge' },
 
         { id: 'chat', icon: ChatBubbleIcon, label: t('chat') || 'Chat' },
-        { id: 'popular', icon: TrendingUpIcon, label: t('popular') || 'Popular' },
+        { id: 'community', icon: UsersIcon, label: t('community') || 'Community' },
         { id: 'profile', icon: ProfileIcon, label: t('profile') || 'Profile' },
     ];
 

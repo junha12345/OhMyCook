@@ -16,6 +16,13 @@ import LandingPage from './components/LandingPage';
 import BottomNavigation from './components/BottomNavigation';
 import Profile from './components/Profile';
 import PageTransition from './components/PageTransition';
+import {
+  getUserIngredients,
+  getUserSavedRecipes,
+  replaceUserIngredients,
+  replaceUserSavedRecipes,
+  saveUserProfile,
+} from './services/supabaseService';
 
 const defaultSettings: UserSettings = {
   cookingLevel: 'Beginner',
@@ -32,11 +39,13 @@ type View = 'tab' | 'onboarding' | 'recommendations' | 'chat' | 'shoppingList' |
 
 // Main App Content Component
 const AppContent: React.FC = () => {
-  const [settings, setSettings] = useLocalStorage<UserSettings>('ohmycook-settings', defaultSettings);
-  const [ingredients, setIngredients] = useLocalStorage<Ingredient[]>('ohmycook-ingredients', []);
-  const [shoppingList, setShoppingList] = useLocalStorage<ShoppingListItem[]>('ohmycook-shoppinglist', []);
-  const [savedRecipes, setSavedRecipes] = useLocalStorage<Recipe[]>('ohmycook-savedrecipes', []);
+  const [settings, setSettings] = useState<UserSettings>(defaultSettings);
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [shoppingList, setShoppingList] = useState<ShoppingListItem[]>([]);
+  const [savedRecipes, setSavedRecipes] = useState<Recipe[]>([]);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [ingredientsLoaded, setIngredientsLoaded] = useState(false);
+  const [savedRecipesLoaded, setSavedRecipesLoaded] = useState(false);
 
   // Navigation State
   const [currentView, setCurrentView] = useState<View>('tab');
@@ -54,14 +63,161 @@ const AppContent: React.FC = () => {
 
   const { language, t } = useLanguage();
 
+  const generateUserId = () => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+    return Math.random().toString(36).slice(2);
+  };
+
+  const getUserScopedKey = (key: string, userId?: string | null) => `ohmycook-${key}-${userId ?? 'guest'}`;
+
+  const loadCachedState = <T,>(key: string, fallback: T) => {
+    try {
+      const stored = localStorage.getItem(key);
+      return stored ? (JSON.parse(stored) as T) : fallback;
+    } catch (error) {
+      console.error('Failed to parse cached state', error);
+      return fallback;
+    }
+  };
+
+  const persistCachedState = (key: string, value: unknown) => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      console.error('Failed to persist cached state', error);
+    }
+  };
+
   useEffect(() => {
     setIsInitialLoad(false);
   }, []);
 
   useEffect(() => {
+    let needsUpdate = false;
+    const updatedUsers = users.map(user => {
+      if (user.id) return user;
+      needsUpdate = true;
+      return { ...user, id: generateUserId() };
+    });
+
+    if (needsUpdate) {
+      setUsers(updatedUsers);
+
+      if (currentUser) {
+        const refreshedUser = updatedUsers.find(user => user.email === currentUser.email);
+        if (refreshedUser) {
+          setCurrentUser(refreshedUser);
+        }
+      }
+    }
+  }, [users, currentUser, setUsers, setCurrentUser]);
+
+  useEffect(() => {
     document.documentElement.lang = language;
     document.title = t('appTitle');
   }, [language, t]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const settingsKey = getUserScopedKey('settings', currentUser.id);
+    const ingredientsKey = getUserScopedKey('ingredients', currentUser.id);
+    const savedRecipesKey = getUserScopedKey('savedrecipes', currentUser.id);
+    const shoppingListKey = getUserScopedKey('shoppinglist', currentUser.id);
+
+    persistCachedState(settingsKey, settings);
+    persistCachedState(ingredientsKey, ingredients);
+    persistCachedState(savedRecipesKey, savedRecipes);
+    persistCachedState(shoppingListKey, shoppingList);
+  }, [currentUser, settings, ingredients, savedRecipes, shoppingList]);
+
+  useEffect(() => {
+    if (!currentUser || !ingredientsLoaded) return;
+
+    const pushIngredients = async () => {
+      try {
+        await replaceUserIngredients(currentUser.id, ingredients);
+      } catch (error) {
+        console.error('Failed to persist ingredients to Supabase', error);
+      }
+    };
+
+    pushIngredients();
+  }, [currentUser, ingredients, ingredientsLoaded]);
+
+  useEffect(() => {
+    if (!currentUser || !savedRecipesLoaded) return;
+
+    const pushSavedRecipes = async () => {
+      try {
+        await replaceUserSavedRecipes(currentUser.id, savedRecipes);
+      } catch (error) {
+        console.error('Failed to persist saved recipes to Supabase', error);
+      }
+    };
+
+    pushSavedRecipes();
+  }, [currentUser, savedRecipes, savedRecipesLoaded]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      setSettings(defaultSettings);
+      setIngredients([]);
+      setSavedRecipes([]);
+      setShoppingList([]);
+      setIngredientsLoaded(false);
+      setSavedRecipesLoaded(false);
+      return;
+    }
+
+    const settingsKey = getUserScopedKey('settings', currentUser.id);
+    const ingredientsKey = getUserScopedKey('ingredients', currentUser.id);
+    const savedRecipesKey = getUserScopedKey('savedrecipes', currentUser.id);
+    const shoppingListKey = getUserScopedKey('shoppinglist', currentUser.id);
+
+    const cachedSettings = loadCachedState<UserSettings>(settingsKey, defaultSettings);
+    setSettings(cachedSettings);
+    setIngredients(loadCachedState<Ingredient[]>(ingredientsKey, []));
+    setSavedRecipes(loadCachedState<Recipe[]>(savedRecipesKey, []));
+    setShoppingList(loadCachedState<ShoppingListItem[]>(shoppingListKey, []));
+
+    setIngredientsLoaded(false);
+    setSavedRecipesLoaded(false);
+
+    const syncUserData = async () => {
+      try {
+        await saveUserProfile({
+          id: currentUser.id,
+          email: currentUser.email,
+          display_name: currentUser.email.split('@')[0],
+          has_completed_onboarding: currentUser.hasCompletedOnboarding,
+          preferred_cuisines: cachedSettings.preferredCuisines,
+        });
+
+        const [remoteIngredients, remoteSavedRecipes] = await Promise.all([
+          getUserIngredients(currentUser.id).catch(() => []),
+          getUserSavedRecipes(currentUser.id).catch(() => []),
+        ]);
+
+        setIngredients(
+          remoteIngredients.length
+            ? remoteIngredients.map(item => ({ name: item.ingredient_name, quantity: item.quantity }))
+            : [],
+        );
+
+        setSavedRecipes(remoteSavedRecipes.length ? remoteSavedRecipes.map(item => item.recipe_data) : []);
+      } catch (error) {
+        console.error('Failed to sync user data from Supabase', error);
+      } finally {
+        setIngredientsLoaded(true);
+        setSavedRecipesLoaded(true);
+      }
+    };
+
+    syncUserData();
+  }, [currentUser]);
 
   const handleNavigate = (view: View, isBack: boolean = false) => {
     setPreviousView(currentView);
@@ -109,14 +265,31 @@ const AppContent: React.FC = () => {
     }
 
     // Mark onboarding as complete for the current user
-    if (currentUser && !currentUser.hasCompletedOnboarding) {
-      const updatedUsers = users.map(user =>
-        user.email === currentUser.email
-          ? { ...user, hasCompletedOnboarding: true }
-          : user
-      );
-      setUsers(updatedUsers);
-      setCurrentUser(prevUser => (prevUser ? { ...prevUser, hasCompletedOnboarding: true } : null));
+    if (currentUser) {
+      const hasCompletedOnboarding = currentUser.hasCompletedOnboarding || initialIngredients.length > 0;
+      if (!currentUser.hasCompletedOnboarding && hasCompletedOnboarding) {
+        const updatedUsers = users.map(user =>
+          user.email === currentUser.email
+            ? { ...user, hasCompletedOnboarding: true }
+            : user
+        );
+        setUsers(updatedUsers);
+        setCurrentUser(prevUser => (prevUser ? { ...prevUser, hasCompletedOnboarding: true } : null));
+      }
+
+      (async () => {
+        try {
+          await saveUserProfile({
+            id: currentUser.id,
+            email: currentUser.email,
+            display_name: currentUser.email.split('@')[0],
+            has_completed_onboarding: hasCompletedOnboarding,
+            preferred_cuisines: newSettings.preferredCuisines,
+          });
+        } catch (error) {
+          console.error('Failed to persist user settings', error);
+        }
+      })();
     }
 
     setCurrentView('tab');
@@ -146,8 +319,29 @@ const AppContent: React.FC = () => {
   };
 
   const handleLogin = (user: User) => {
-    setCurrentUser(user);
-    if (user.hasCompletedOnboarding) {
+    const userWithId = user.id ? user : { ...user, id: generateUserId() };
+
+    if (!user.id) {
+      setUsers(prev => prev.map(u => (u.email === user.email ? userWithId : u)));
+    }
+
+    setCurrentUser(userWithId);
+
+    (async () => {
+      try {
+        await saveUserProfile({
+          id: userWithId.id,
+          email: userWithId.email,
+          display_name: userWithId.email.split('@')[0],
+          has_completed_onboarding: userWithId.hasCompletedOnboarding,
+          preferred_cuisines: settings.preferredCuisines,
+        });
+      } catch (error) {
+        console.error('Failed to save login profile', error);
+      }
+    })();
+
+    if (userWithId.hasCompletedOnboarding) {
       setCurrentView('tab');
       setCurrentTab('cook');
     } else {
@@ -156,11 +350,32 @@ const AppContent: React.FC = () => {
   };
 
   const handleSignup = (newUser: Pick<User, 'email' | 'password'>) => {
-    setUsers(prev => [...prev, { ...newUser, hasCompletedOnboarding: false }]);
-    setCurrentView('auth');
+    const userWithId: User = { ...newUser, id: generateUserId(), hasCompletedOnboarding: false };
+    setUsers(prev => [...prev, userWithId]);
+    setCurrentUser(userWithId);
+
+    (async () => {
+      try {
+        await saveUserProfile({
+          id: userWithId.id,
+          email: userWithId.email,
+          display_name: userWithId.email.split('@')[0],
+          has_completed_onboarding: false,
+          preferred_cuisines: [],
+        });
+      } catch (error) {
+        console.error('Failed to save signup profile', error);
+      }
+    })();
+
+    setCurrentView('onboarding');
   };
 
   const handleLogout = () => {
+    setSettings(defaultSettings);
+    setIngredients([]);
+    setSavedRecipes([]);
+    setShoppingList([]);
     setCurrentUser(null);
     setCurrentView('tab');
     setCurrentTab('cook'); // Or stay on profile? Better to go to home/auth.

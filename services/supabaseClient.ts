@@ -1,11 +1,15 @@
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+
+if (!isSupabaseConfigured) {
+  console.warn(
+    '[Supabase] Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY. Supabase features are disabled; data will stay local only.',
+  );
 }
 
-const restUrl = `${supabaseUrl}/rest/v1`;
+const restUrl = supabaseUrl ? `${supabaseUrl}/rest/v1` : '';
 
 interface SupabaseRequestInit extends RequestInit {
   prefer?: string;
@@ -27,6 +31,11 @@ export async function supabaseRequest<T>(
   path: string,
   { prefer, headers, ...init }: SupabaseRequestInit = {},
 ): Promise<T> {
+  if (!isSupabaseConfigured) {
+    console.warn('[Supabase] Skipping request because Supabase is not configured:', path);
+    return undefined as T;
+  }
+
   const response = await fetch(`${restUrl}${path}`, {
     ...init,
     headers: {

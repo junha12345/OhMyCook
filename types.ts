@@ -51,6 +51,7 @@ export interface ShoppingListItem {
 }
 
 export interface User {
+  id: string;
   email: string;
   password: string;
   hasCompletedOnboarding: boolean;
@@ -73,4 +74,11 @@ export interface UserIngredientRecord {
   user_id: string;
   ingredient_name: string;
   quantity: string;
+}
+
+export interface SavedRecipeRecord {
+  user_id: string;
+  recipe_name: string;
+  recipe_data: Recipe;
+  created_at?: string;
 }

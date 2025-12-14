@@ -65,6 +65,16 @@ create table if not exists public.user_ingredients (
   created_at timestamptz default now()
 );
 create index if not exists user_ingredients_user_idx on public.user_ingredients (user_id);
+
+-- Recipes a user saved/bookmarked
+create table if not exists public.user_saved_recipes (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id),
+  recipe_name text not null,
+  recipe_data jsonb not null,
+  created_at timestamptz default now()
+);
+create index if not exists user_saved_recipes_user_idx on public.user_saved_recipes (user_id);
 ```
 
 Then enable Row Level Security and add policies:
@@ -74,12 +84,16 @@ alter table public.user_profiles enable row level security;
 alter table public.search_events enable row level security;
 alter table public.recipe_search_counts enable row level security;
 alter table public.user_ingredients enable row level security;
+alter table public.user_saved_recipes enable row level security;
 
 -- Allow users to manage only their own profile and ingredients
 create policy "users manage their profile" on public.user_profiles
   for all using (auth.uid() = id) with check (auth.uid() = id);
 
 create policy "users manage their ingredients" on public.user_ingredients
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "users manage their saved recipes" on public.user_saved_recipes
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- Allow anonymous reads of popular recipes only
@@ -97,3 +111,4 @@ With the tables in place, use the helper functions in `services/supabaseService.
 - `recordRecipeSearch({ userId, recipeName, searchTerm })` to log a query and bump its popularity count.
 - `getPopularRecipes(limit)` to fetch the most searched recipes.
 - `replaceUserIngredients(userId, ingredients)` or `appendUserIngredient` to store pantry items per user.
+- `replaceUserSavedRecipes(userId, recipes)` and `getUserSavedRecipes(userId)` to persist user bookmarks.

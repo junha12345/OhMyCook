@@ -52,9 +52,16 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onSelect }) => {
 
 
     return (
-        <div onClick={onSelect} className={`bg-surface rounded-2xl shadow-subtle overflow-hidden flex cursor-pointer hover:shadow-lg transition-shadow relative ${isLoadingDetails ? 'opacity-60' : ''}`}>
+        <div 
+            onClick={isLoadingDetails ? undefined : onSelect} 
+            className={`bg-surface rounded-2xl shadow-subtle overflow-hidden flex transition-shadow relative ${
+                isLoadingDetails 
+                    ? 'opacity-60 cursor-not-allowed' 
+                    : 'cursor-pointer hover:shadow-lg'
+            }`}
+        >
             {isLoadingDetails && (
-                <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-10 pointer-events-none">
+                <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-10">
                     <Spinner size="sm" />
                 </div>
             )}

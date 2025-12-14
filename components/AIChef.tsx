@@ -111,21 +111,23 @@ const AIChef: React.FC<AIChefProps> = ({
       <Header title={headerTitle} onBack={handleBack} showBack={showBack} />
 
       <div className="flex-grow p-4 overflow-y-auto space-y-4">
-        {/* Initial Greeting */}
-        <div className="flex justify-start">
-          <div className="flex items-start gap-2 max-w-xs md:max-w-md">
-            <div className="w-8 h-8 rounded-full bg-brand-primary flex items-center justify-center flex-shrink-0">
-              <LogoIcon className="w-5 h-5 text-white" />
-            </div>
-            <div className="bg-surface p-3 rounded-lg rounded-bl-none shadow-subtle">
-              <p className="text-sm text-text-primary whitespace-pre-line">
-                {recipeContext && messages.length === 0
-                  ? `${t('aiChefGreeting')}\n\n${t('chatAboutRecipe', { recipeName: recipeContext.recipeName.split('(')[0].trim() })}`
-                  : t('aiChefGreeting')}
-              </p>
+        {/* Initial Greeting - only show if no chat history */}
+        {messages.length === 0 && (
+          <div className="flex justify-start">
+            <div className="flex items-start gap-2 max-w-xs md:max-w-md">
+              <div className="w-8 h-8 rounded-full bg-brand-primary flex items-center justify-center flex-shrink-0">
+                <LogoIcon className="w-5 h-5 text-white" />
+              </div>
+              <div className="bg-surface p-3 rounded-lg rounded-bl-none shadow-subtle">
+                <p className="text-sm text-text-primary whitespace-pre-line">
+                  {recipeContext
+                    ? `${t('aiChefGreeting')}\n\n${t('chatAboutRecipe', { recipeName: recipeContext.recipeName.split('(')[0].trim() })}`
+                    : t('aiChefGreeting')}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {messages.map((msg, index) => (
           <motion.div

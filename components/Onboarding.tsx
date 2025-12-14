@@ -458,20 +458,22 @@ const Onboarding: React.FC<OnboardingProps> = ({ initialSettings, onSave, onBack
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background p-6">
-      <div className="flex items-center justify-between mb-4">
+    <div className="flex flex-col h-[100dvh] bg-background">
+      <div className="flex items-center justify-between p-6 pb-4 flex-shrink-0">
         <button onClick={step === 1 ? onBack : handlePrev} className="text-text-primary text-lg">
           ← {t('previous')}
         </button>
         <span className="text-text-secondary">{step}/{totalSteps}</span>
       </div>
-      <ProgressBar step={step} totalSteps={totalSteps} />
+      <div className="px-6 flex-shrink-0">
+        <ProgressBar step={step} totalSteps={totalSteps} />
+      </div>
 
-      <div className="flex-grow my-8 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto px-6 py-6">
         {renderStep()}
       </div>
 
-      <div className="mt-auto">
+      <div className="p-6 pt-4 flex-shrink-0">
         {step < totalSteps ? (
           <button onClick={handleNext} className="w-full bg-brand-primary text-white font-bold py-4 rounded-xl">
             {t('next')}

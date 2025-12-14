@@ -1,5 +1,5 @@
 import { supabaseRequest } from './supabaseClient';
-import { Ingredient, RecipeSearchCount, UserIngredientRecord, UserProfileRecord } from '../types';
+import { Ingredient, Recipe, RecipeSearchCount, SavedRecipeRecord, UserIngredientRecord, UserProfileRecord } from '../types';
 
 function encodeFilter(value: string) {
   return encodeURIComponent(value);
@@ -116,4 +116,40 @@ export async function appendUserIngredient(userId: string, ingredient: Ingredien
   );
 
   return row;
+}
+
+export async function getUserSavedRecipes(userId: string) {
+  if (!userId) throw new Error('User ID is required to fetch saved recipes.');
+
+  const data = await supabaseRequest<SavedRecipeRecord[]>(
+    `/user_saved_recipes?user_id=eq.${encodeFilter(userId)}`,
+  );
+
+  return data ?? [];
+}
+
+export async function replaceUserSavedRecipes(userId: string, recipes: Recipe[]) {
+  if (!userId) throw new Error('User ID is required to update saved recipes.');
+
+  await supabaseRequest(`/user_saved_recipes?user_id=eq.${encodeFilter(userId)}`, {
+    method: 'DELETE',
+  });
+
+  if (!recipes.length) return [] as SavedRecipeRecord[];
+
+  const records = recipes.map((recipe) => ({
+    user_id: userId,
+    recipe_name: recipe.recipeName,
+    recipe_data: recipe,
+  }));
+
+  const data = await supabaseRequest<SavedRecipeRecord[]>(
+    '/user_saved_recipes',
+    {
+      method: 'POST',
+      body: JSON.stringify(records),
+    },
+  );
+
+  return data ?? [];
 }

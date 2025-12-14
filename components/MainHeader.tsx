@@ -10,7 +10,7 @@ interface MainHeaderProps {
 const MainHeader: React.FC<MainHeaderProps> = ({ onBack, onLogoClick }) => {
     useLanguage();
     return (
-        <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b border-line-light">
+        <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-sm border-b border-line-light pt-[env(safe-area-inset-top)]">
             <div className="container mx-auto px-4 py-3 flex items-center h-16">
                 <div className="flex items-center gap-2">
                     {onBack && (

@@ -176,7 +176,7 @@ const AIChef: React.FC<AIChefProps> = ({
 
   return (
     <div className={`flex flex-col h-screen bg-background ${!showBack ? 'pb-24' : ''}`}>
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-surface gap-2">
+      <div className="flex items-center justify-between px-4 py-3 border-b bg-surface gap-2 pt-[calc(0.75rem+env(safe-area-inset-top))]">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {showBack && (
             <button onClick={handleBack} className="text-text-primary text-lg flex-shrink-0">
@@ -344,17 +344,44 @@ const AIChef: React.FC<AIChefProps> = ({
                 const recognition = new SpeechRecognition();
                 recognition.lang = language === 'ko' ? 'ko-KR' : 'en-US';
                 recognition.interimResults = false;
+                recognition.lang = language === 'ko' ? 'ko-KR' : 'en-US';
+                recognition.interimResults = false;
+                recognition.continuous = false; // Auto-send requires stopping after one phrase usually, or just detecting end
+                recognition.maxAlternatives = 1;
                 recognition.maxAlternatives = 1;
 
                 recognition.onstart = () => setIsListening(true);
-                recognition.onend = () => setIsListening(false);
+                recognition.onend = () => {
+                  setIsListening(false);
+                  // Auto-send if we have input
+                  setInput(prev => {
+                    if (prev.trim()) {
+                      // We need to call handleSend, but we can't easily access the latest state inside this closure unless we use a ref or controlled effect.
+                      // Actually, setInput updater is safe. But calling handleSend(prev) might use stale state?
+                      // Better to trigger a send effect or just call a ref-held function.
+                      // For simplicity, let's just trigger a click on the send button programmatically or use a timeout?
+                      // Cleanest: Use a useEffect that watches `isListening` going from true to false with `input` present? 
+                      // But `onend` fires even if error. 
+                      // Let's use a small timeout to trigger send.
+                      setTimeout(() => {
+                        const sendBtn = document.getElementById('chat-send-button');
+                        if (sendBtn) sendBtn.click();
+                      }, 100);
+                    }
+                    return prev;
+                  });
+                };
                 recognition.onerror = (event: any) => {
                   console.error("Speech recognition error", event.error);
                   setIsListening(false);
                 };
                 recognition.onresult = (event: any) => {
-                  const transcript = event.results[0][0].transcript;
-                  setInput(prev => prev + (prev ? ' ' : '') + transcript);
+                  const current = event.resultIndex;
+                  const transcript = event.results[current][0].transcript;
+                  setInput(prev => {
+                    const trimmedPrev = prev.trim();
+                    return trimmedPrev ? `${trimmedPrev} ${transcript}` : transcript;
+                  });
                 };
 
                 recognitionRef.current = recognition;
@@ -371,6 +398,7 @@ const AIChef: React.FC<AIChefProps> = ({
             whileHover={{ scale: 1.05 }}
             onClick={() => handleSend()}
             disabled={isLoading || !input.trim()}
+            id="chat-send-button"
             className="bg-text-secondary hover:bg-text-primary text-white p-3 rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center aspect-square"
           >
             <SendIcon className="w-5 h-5" />

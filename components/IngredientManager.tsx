@@ -27,6 +27,7 @@ const IngredientManager: React.FC<IngredientManagerProps> = ({ ingredients, setI
   const [searchTerm, setSearchTerm] = useState('');
   const [searchSuggestions, setSearchSuggestions] = useState<(typeof ALL_INGREDIENTS[0])[]>([]);
   const [isScanning, setIsScanning] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { t, language } = useLanguage();
@@ -76,6 +77,7 @@ const IngredientManager: React.FC<IngredientManagerProps> = ({ ingredients, setI
     try {
       const { analyzeReceipt } = await import('../services/geminiService');
       const base64Image = await fileToBase64(file);
+      setPreviewImage(`data:image/jpeg;base64,${base64Image}`);
       const detectedIngredients = await analyzeReceipt(base64Image);
 
       if (detectedIngredients.length > 0) {
@@ -162,6 +164,17 @@ const IngredientManager: React.FC<IngredientManagerProps> = ({ ingredients, setI
             {isScanning ? <Spinner /> : <CameraIcon className="w-6 h-6" />}
           </button>
         </div>
+        {previewImage && (
+          <div className="mb-4 relative rounded-xl overflow-hidden border border-line-light h-40">
+            <img src={previewImage} alt="Receipt Preview" className="w-full h-full object-cover" />
+            <button
+              onClick={() => setPreviewImage(null)}
+              className="absolute top-2 right-2 bg-black/50 text-white p-1 rounded-full hover:bg-black/70"
+            >
+              <XIcon className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex-grow p-4 pt-0 overflow-y-auto pb-40">

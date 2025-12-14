@@ -41,6 +41,7 @@ export interface CommunityComment {
 
 export interface CommunityPost {
   id: string;
+  authorId: string;
   authorEmail: string;
   authorName?: string;
   authorProfileImage?: string;

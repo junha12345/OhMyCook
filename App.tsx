@@ -227,6 +227,7 @@ const AppContent: React.FC = () => {
       const profile = profilesMap[p.author_id];
       return {
         id: p.id,
+        authorId: p.author_id,
         authorEmail: '',
         authorName: profile?.nickname || 'Unknown Chef',
         authorProfileImage: profile?.profile_image,
@@ -481,9 +482,19 @@ const AppContent: React.FC = () => {
       author_id: session.user.id,
       content: content
     });
-
     if (error) console.error("Comment failed:", error);
     else fetchCommunityPostsDetailed();
+  };
+
+  const handleDeleteCommunityPost = async (postId: string) => {
+    const { error } = await supabase.from('community_posts').delete().eq('id', postId);
+    if (error) {
+      console.error("Delete error:", error);
+      alert("삭제 실패");
+    } else {
+      setCommunityPosts(prev => prev.filter(p => p.id !== postId));
+      alert("삭제되었습니다.");
+    }
   };
 
   const renderTab = () => {
@@ -535,6 +546,7 @@ const AppContent: React.FC = () => {
             onCreatePost={handleCreateCommunityPost}
             onToggleLike={handleToggleCommunityLike}
             onAddComment={handleAddCommunityComment}
+            onDeletePost={handleDeleteCommunityPost}
           />
         );
       case 'profile':

@@ -3,7 +3,7 @@ import MainHeader from './MainHeader';
 import ImageWithFallback from './ImageWithFallback';
 import { useLanguage } from '../context/LanguageContext';
 import { CommunityPost, Recipe, User } from '../types';
-import { HeartIcon, MessageCircleIcon, SendIcon, UsersIcon } from './icons';
+import { HeartIcon, MessageCircleIcon, SendIcon, UsersIcon, XIcon } from './icons';
 
 interface CommunityProps {
   currentUser: User | null;
@@ -12,7 +12,9 @@ interface CommunityProps {
   posts: CommunityPost[];
   onCreatePost: (recipe: Recipe, note?: string) => void;
   onToggleLike: (postId: string) => void;
+  onToggleLike: (postId: string) => void;
   onAddComment: (postId: string, content: string) => void;
+  onDeletePost: (postId: string) => void;
 }
 
 const Community: React.FC<CommunityProps> = ({
@@ -22,7 +24,10 @@ const Community: React.FC<CommunityProps> = ({
   posts,
   onCreatePost,
   onToggleLike,
+  onCreatePost,
+  onToggleLike,
   onAddComment,
+  onDeletePost
 }) => {
   const { t } = useLanguage();
   const [selectedRecipeName, setSelectedRecipeName] = useState<string>(savedRecipes[0]?.recipeName || '');
@@ -236,7 +241,21 @@ const Community: React.FC<CommunityProps> = ({
                     >
                       <HeartIcon className={`w-4 h-4 ${hasLiked ? 'fill-current' : ''}`} />
                       <span className="text-sm font-semibold">{post.likes.length}</span>
+                      <span className="text-sm font-semibold">{post.likes.length}</span>
                     </button>
+                    {currentUser && currentUser.id === post.authorId && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(t('confirmDeletePost') || "Delete this post?")) {
+                            onDeletePost(post.id);
+                          }
+                        }}
+                        className="ml-2 p-2 text-text-secondary hover:text-red-500 transition-colors"
+                      >
+                        <XIcon className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
 
                   <button

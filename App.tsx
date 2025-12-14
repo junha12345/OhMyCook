@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { UserSettings, Ingredient, ShoppingListItem, Recipe, User, ChatMessage, CommunityPost, RecipeFilters } from './types';
+import { UserSettings, Ingredient, ShoppingListItem, Recipe, User, ChatMessage, CommunityPost, RecipeFilters, CommunityComment } from './types';
 import IngredientManager from './components/IngredientManager';
 import RecipeRecommendations from './components/RecipeRecommendations';
 import AIChef from './components/AIChef';
@@ -35,16 +35,18 @@ type View = 'tab' | 'onboarding' | 'recommendations' | 'chat' | 'shoppingList' |
 
 // Main App Content Component
 const AppContent: React.FC = () => {
-  const [users, setUsers] = useLocalStorage<User[]>('ohmycook-users', []);
-  const [currentUser, setCurrentUser] = useLocalStorage<User | null>('ohmycook-currentUser', null);
+  const [users, setUsers] = useLocalStorage<User[]>('ohmycook-users', []); // Keep mainly for non-auth legacy or fallback? Actually we migrate off this.
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
+  const [settings, setSettings] = useState<UserSettings>(defaultSettings);
+
+  // Use local storage for ingredients/shopping list (device specific is fine for now, or migrate later)
   const userStorageSuffix = currentUser?.email ?? 'guest';
-
-  const [settings, setSettings] = useLocalStorage<UserSettings>(`ohmycook-settings-${userStorageSuffix}`, defaultSettings);
   const [ingredients, setIngredients] = useLocalStorage<Ingredient[]>(`ohmycook-ingredients-${userStorageSuffix}`, []);
   const [shoppingList, setShoppingList] = useLocalStorage<ShoppingListItem[]>(`ohmycook-shoppinglist-${userStorageSuffix}`, []);
   const [savedRecipes, setSavedRecipes] = useLocalStorage<Recipe[]>(`ohmycook-savedrecipes-${userStorageSuffix}`, []);
-  const [communityPosts, setCommunityPosts] = useLocalStorage<CommunityPost[]>('ohmycook-community-posts', []);
+
+  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
 
   const defaultRecipeFilters: RecipeFilters = {
     cuisine: 'any',
@@ -74,41 +76,158 @@ const AppContent: React.FC = () => {
 
   const { language, t } = useLanguage();
 
+  const fetchProfile = async (userId: string, email: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 is no rows
+        console.error('Error fetching profile:', error);
+        return;
+      }
+
+      if (data) {
+        setSettings({
+          cookingLevel: (data.cooking_level as any) || 'Beginner',
+          allergies: data.allergies || [],
+          preferredCuisines: data.preferred_cuisines || [],
+          dislikedIngredients: data.disliked_ingredients || [],
+          availableTools: data.available_tools || [],
+          spicinessPreference: data.spiciness_preference || 3,
+          maxCookTime: data.max_cook_time || 30,
+          nickname: data.nickname || '',
+          profileImage: data.profile_image || '',
+        });
+
+        const user: User = {
+          id: userId,
+          email: email,
+          hasCompletedOnboarding: data.has_completed_onboarding || false
+        };
+        setCurrentUser(user);
+
+        if (data.has_completed_onboarding) {
+          // Stay on current view if already set, or default?
+          // If this is initial load:
+          if (isInitialLoad) {
+            setCurrentView('tab');
+            setCurrentTab('cook');
+          }
+        } else {
+          setCurrentView('onboarding');
+        }
+
+      } else {
+        // No profile yet, create one? Or wait for onboarding save?
+        // Just set basic user
+        const user: User = { id: userId, email, hasCompletedOnboarding: false };
+        setCurrentUser(user);
+        setCurrentView('onboarding');
+      }
+    } catch (error) {
+      console.error('Profile fetch unexpected error:', error);
+    }
+  };
+
+  const fetchCommunityPosts = async () => {
+    const { data, error } = await supabase
+      .from('community_posts')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error("Error fetching posts:", error);
+      return;
+    }
+
+    if (data) {
+      const mappedPosts: CommunityPost[] = data.map(p => ({
+        id: p.id,
+        authorEmail: 'hidden', // DB might not return email if not joined, assume hidden or join profiles
+        authorName: 'Chef', // We might need to join profiles to get names. For now simplified.
+        // Logic improvement: we should join with profiles table to get nickname/image
+        // For now, let's keep it simple or fetch separately. 
+        // Actually, let's try to select author_id and maybe we can fetch profile later?
+        // Or better:
+        // .select('*, profiles(nickname, profile_image)')
+        // But let's assume standard structure first.
+        recipe: p.recipe,
+        note: p.note,
+        createdAt: p.created_at,
+        likes: p.likes || [],
+        comments: [] // We need to fetch comments separately or join
+      }));
+
+      // Enhanced fetch with joins if possible, but keeping it simple first to avoid heavy join logic without types
+      // Let's rely on simple fetch first.
+      setCommunityPosts(mappedPosts);
+    }
+  };
+
+  // Improved fetch with Joins
+  const fetchCommunityPostsDetailed = async () => {
+    const { data, error } = await supabase
+      .from('community_posts')
+      .select(`
+        *,
+        profiles:author_id (nickname, profile_image),
+        community_comments (id, content, created_at, author_id)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) console.error("Posts fetch error:", error);
+    else if (data) {
+      const posts: CommunityPost[] = data.map((p: any) => ({
+        id: p.id,
+        authorEmail: '', // Not exposing email publicly for privacy usually, or fetch if needed
+        authorName: p.profiles?.nickname || 'Unknown Chef',
+        authorProfileImage: p.profiles?.profile_image,
+        recipe: p.recipe,
+        note: p.note,
+        createdAt: p.created_at,
+        likes: p.likes || [],
+        comments: p.community_comments?.map((c: any) => ({
+          id: c.id,
+          content: c.content,
+          createdAt: c.created_at,
+          authorEmail: '',
+          authorName: 'User', // Need recursive join or separate fetch for comment authors? 
+          // For MVP, just show content
+        })) || []
+      }));
+      setCommunityPosts(posts);
+    }
+  };
+
+
   useEffect(() => {
-    setIsInitialLoad(false);
+    // Initial Auth Check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        fetchProfile(session.user.id, session.user.email!);
+      } else {
+        setCurrentUser(null);
+        setSettings(defaultSettings);
+      }
+      setIsInitialLoad(false);
+    });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session?.user?.email) {
-        const email = session.user.email;
-        // Check if user exists in local storage
-        setUsers(prevUsers => {
-          const existingUser = prevUsers.find(u => u.email === email);
-          if (existingUser) {
-            setCurrentUser(existingUser);
-            if (existingUser.hasCompletedOnboarding) {
-              setCurrentView('tab');
-              setCurrentTab('cook');
-            } else {
-              setCurrentView('onboarding');
-            }
-            return prevUsers;
-          } else {
-            // New user from social auth
-            const newUser: User = {
-              email,
-              hasCompletedOnboarding: false,
-            };
-            setCurrentUser(newUser); // Will trigger onboarding if not completed
-            setCurrentView('onboarding'); // Force onboarding for new Google users
-            return [...prevUsers, newUser];
-          }
-        });
+      if (event === 'SIGNED_IN' && session?.user) {
+        fetchProfile(session.user.id, session.user.email!);
       } else if (event === 'SIGNED_OUT') {
         setCurrentUser(null);
+        setSettings(defaultSettings);
         setCurrentView('tab');
         setCurrentTab('cook');
       }
     });
+
+    // Fetch Community Posts
+    fetchCommunityPostsDetailed();
 
     return () => {
       subscription.unsubscribe();
@@ -128,6 +247,7 @@ const AppContent: React.FC = () => {
 
   const handleTabChange = (tab: Tab) => {
     setCurrentTab(tab);
+    if (tab === 'community') fetchCommunityPostsDetailed(); // Refresh posts on tab enter
     setCurrentView('tab');
   };
 
@@ -136,7 +256,7 @@ const AppContent: React.FC = () => {
     setChatContext(recipe);
     setCurrentChatKey(recipeKey);
     setChatOpenedFromRecipe(recipe);
-    setOpenedRecipeModal(recipe); // Remember which modal was open
+    setOpenedRecipeModal(recipe);
     handleNavigate('chat');
   };
 
@@ -154,8 +274,36 @@ const AppContent: React.FC = () => {
     setChatOpenedFromRecipe(null);
   };
 
-  const handleSaveSettings = (newSettings: UserSettings, initialIngredients: string[] = []) => {
+  const handleSaveSettings = async (newSettings: UserSettings, initialIngredients: string[] = []) => {
+    // Optimistic update
     setSettings(newSettings);
+
+    // Save to Supabase
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      const { error } = await supabase.from('profiles').upsert({
+        id: session.user.id,
+        nickname: newSettings.nickname,
+        cooking_level: newSettings.cookingLevel,
+        allergies: newSettings.allergies,
+        preferred_cuisines: newSettings.preferredCuisines,
+        disliked_ingredients: newSettings.dislikedIngredients,
+        available_tools: newSettings.availableTools,
+        spiciness_preference: newSettings.spicinessPreference,
+        max_cook_time: newSettings.maxCookTime,
+        profile_image: newSettings.profileImage,
+        has_completed_onboarding: true,
+        updated_at: new Date(),
+      });
+
+      if (error) {
+        console.error("Error saving profile to Supabase:", error);
+        // Revert or show toast?
+      } else {
+        // Update Local User State
+        setCurrentUser(prev => prev ? { ...prev, hasCompletedOnboarding: true } : null);
+      }
+    }
 
     if (initialIngredients.length > 0) {
       const currentIngredientNames = new Set(ingredients.map(i => i.name));
@@ -164,19 +312,10 @@ const AppContent: React.FC = () => {
         .map(name => ({ name, quantity: t('basicUnit') }));
 
       setIngredients(prev => [...prev, ...newIngredientsToAdd]);
+      // TODO: Sync ingredients to Supabase table 'user_ingredients' (Later phase)
     }
 
-    // Mark onboarding as complete for the current user
-    if (currentUser && !currentUser.hasCompletedOnboarding) {
-      const updatedUsers = users.map(user =>
-        user.email === currentUser.email
-          ? { ...user, hasCompletedOnboarding: true }
-          : user
-      );
-      setUsers(updatedUsers);
-      setCurrentUser(prevUser => (prevUser ? { ...prevUser, hasCompletedOnboarding: true } : null));
-    }
-
+    // Always navigate home
     setCurrentView('tab');
     setCurrentTab('cook');
   };
@@ -205,22 +344,16 @@ const AppContent: React.FC = () => {
   };
 
   const handleLogin = (user: User) => {
-    setCurrentUser(user);
-    if (user.hasCompletedOnboarding) {
-      setCurrentView('tab');
-      setCurrentTab('cook');
-    } else {
-      setCurrentView('onboarding');
-    }
+    // Auth component handles Supabase login, which triggers onAuthStateChange.
+    // So here we mostly just handle View transitions if needed, but onAuthStateChange does it better.
+    // We can keep this for manual overrides or legacy.
+    // Actually Auth.tsx calls onLogin AFTER successful supabase auth usually?
+    // Let's rely on the useEffect hook for state updates.
+    // But we might need to force re-render or clearing view.
   };
 
   const handleSignup = (newUser: Pick<User, 'email' | 'password'>) => {
-    const exists = users.some(u => u.email.toLowerCase() === newUser.email.toLowerCase());
-    if (exists) {
-      return { ok: false, reason: 'duplicate' as const };
-    }
-    setUsers(prev => [...prev, { ...newUser, hasCompletedOnboarding: false }]);
-    setCurrentView('auth');
+    // Handled by Auth.tsx mostly.
     return { ok: true as const };
   };
 
@@ -231,66 +364,74 @@ const AppContent: React.FC = () => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    setCurrentUser(null);
-    setCurrentView('tab');
-    setCurrentTab('cook'); // Or stay on profile? Better to go to home/auth.
-    // If we want to force login on home screen, we can do that in renderTab.
-    // But current logic allows guest browsing for some parts?
-    // Actually, LandingPage is shown if !currentUser.
+    // State clearing handled in useEffect
   };
 
-  const handleCreateCommunityPost = (recipe: Recipe, note?: string) => {
-    if (!currentUser) return;
+  const handleCreateCommunityPost = async (recipe: Recipe, note?: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return; // Should be logged in
 
-    const displayName = settings.nickname || currentUser.email.split('@')[0];
-    const newPost: CommunityPost = {
-      id: `post-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      authorEmail: currentUser.email,
-      authorName: displayName,
-      authorProfileImage: settings.profileImage || undefined,
-      recipe,
-      note,
-      createdAt: new Date().toISOString(),
-      likes: [],
-      comments: [],
+    const newPost = {
+      author_id: session.user.id,
+      recipe: recipe,
+      note: note,
+      likes: []
     };
 
-    setCommunityPosts((prev) => [newPost, ...prev]);
+    const { error } = await supabase.from('community_posts').insert(newPost);
+
+    if (error) {
+      console.error("Error creating post:", error);
+    } else {
+      // Refresh posts
+      fetchCommunityPostsDetailed();
+    }
   };
 
-  const handleToggleCommunityLike = (postId: string) => {
-    if (!currentUser) return;
-    setCommunityPosts((prev) =>
-      prev.map((post) => {
-        if (post.id !== postId) return post;
-        const hasLiked = post.likes.includes(currentUser.email);
-        return {
-          ...post,
-          likes: hasLiked
-            ? post.likes.filter((email) => email !== currentUser.email)
-            : [...post.likes, currentUser.email],
-        };
-      })
-    );
+  const handleToggleCommunityLike = async (postId: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return;
+    const userId = session.user.id;
+
+    const post = communityPosts.find(p => p.id === postId);
+    if (!post) return;
+
+    const hasLiked = post.likes.includes(session.user.email); // Wait, likes array in DB stores what? IDs or Emails? 
+    // Usually IDs. Let's switch to checking ID if we change DB schema to array of UUIDs.
+    // For now, let's stick to simple text array. Ideally ID.
+    // But currentUser.email is simpler for display. 
+    // Let's assume we store IDs in DB for robustness.
+
+    // UPDATE: Schema said `likes text[]`. Let's use User IDs.
+    const hasLikedId = post.likes.includes(userId);
+
+    const newLikes = hasLikedId
+      ? post.likes.filter(id => id !== userId)
+      : [...post.likes, userId];
+
+    // Optimistic Update
+    setCommunityPosts(prev => prev.map(p => p.id === postId ? { ...p, likes: newLikes } : p));
+
+    const { error } = await supabase
+      .from('community_posts')
+      .update({ likes: newLikes })
+      .eq('id', postId);
+
+    if (error) console.error("Like update failed:", error);
   };
 
-  const handleAddCommunityComment = (postId: string, content: string) => {
-    if (!currentUser || !content.trim()) return;
-    const displayName = settings.nickname || currentUser.email.split('@')[0];
-    const newComment = {
-      id: `comment-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      authorEmail: currentUser.email,
-      authorName: displayName,
-      authorProfileImage: settings.profileImage || undefined,
-      content,
-      createdAt: new Date().toISOString(),
-    };
+  const handleAddCommunityComment = async (postId: string, content: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user || !content.trim()) return;
 
-    setCommunityPosts((prev) =>
-      prev.map((post) =>
-        post.id === postId ? { ...post, comments: [...post.comments, newComment] } : post
-      )
-    );
+    const { error } = await supabase.from('community_comments').insert({
+      post_id: postId,
+      author_id: session.user.id,
+      content: content
+    });
+
+    if (error) console.error("Comment failed:", error);
+    else fetchCommunityPostsDetailed();
   };
 
   const renderTab = () => {

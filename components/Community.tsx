@@ -208,7 +208,7 @@ const Community: React.FC<CommunityProps> = ({
         ) : (
           <div className="space-y-4">
             {sortedPosts.map((post) => {
-              const hasLiked = currentUser ? post.likes.includes(currentUser.email) : false;
+              const hasLiked = currentUser && currentUser.id ? post.likes.includes(currentUser.id) : false;
               const commentValue = commentInputs[post.id] || '';
               const isExpanded = expandedPostId === post.id;
               return (

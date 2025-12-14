@@ -74,6 +74,7 @@ export interface ShoppingListItem {
 }
 
 export interface User {
+  id?: string; // Supabase UUID
   email: string;
   password?: string;
   hasCompletedOnboarding: boolean;

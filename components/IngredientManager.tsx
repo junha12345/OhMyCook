@@ -193,14 +193,15 @@ const IngredientManager: React.FC<IngredientManagerProps> = ({ ingredients, setI
         )}
       </div>
 
-      <div className="fixed bottom-24 right-4 z-30">
+      <div className="fixed bottom-36 right-4 z-30">
         <button
           onClick={() => {
             if (onGenerateRecipe) onGenerateRecipe();
           }}
-          className="w-14 h-14 bg-gradient-to-tr from-orange-400 to-orange-500 text-white rounded-full flex items-center justify-center shadow-[0_4px_14px_0_rgba(249,115,22,0.39)] hover:scale-105 active:scale-95 transition-all duration-300"
+          className="h-14 px-6 bg-gradient-to-tr from-orange-400 to-orange-500 text-white rounded-full flex items-center justify-center shadow-[0_4px_14px_0_rgba(249,115,22,0.39)] hover:scale-105 active:scale-95 transition-all duration-300 gap-2"
         >
           <ChefHatIcon className="w-7 h-7" />
+          <span className="font-bold text-lg">Cook</span>
         </button>
       </div>
     </div>

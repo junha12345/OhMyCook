@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { PlusIcon, SearchIcon, XIcon, CameraIcon, SpatulaIcon, ChefHatIcon } from './icons';
 import { Ingredient } from '../types';
 import { useLanguage } from '../context/LanguageContext';
-import { getIngredientCategory, getIngredientTranslation, INGREDIENT_CATEGORIES, getIngredientEmoji, ALL_INGREDIENTS } from '../data/ingredients';
+import { getIngredientCategory, getIngredientTranslation, INGREDIENT_CATEGORIES, getIngredientEmoji, ALL_INGREDIENTS, findIngredientEnglishName } from '../data/ingredients';
 import MainHeader from './MainHeader';
 import Spinner from './Spinner';
 
@@ -11,6 +11,7 @@ interface IngredientManagerProps {
   setIngredients: React.Dispatch<React.SetStateAction<Ingredient[]>>;
   onBack?: () => void;
   onGenerateRecipe?: () => void;
+  onLogoClick?: () => void;
 }
 
 const fileToBase64 = (file: File): Promise<string> => {
@@ -22,7 +23,7 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-const IngredientManager: React.FC<IngredientManagerProps> = ({ ingredients, setIngredients, onBack, onGenerateRecipe }) => {
+const IngredientManager: React.FC<IngredientManagerProps> = ({ ingredients, setIngredients, onBack, onGenerateRecipe, onLogoClick }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchSuggestions, setSearchSuggestions] = useState<(typeof ALL_INGREDIENTS[0])[]>([]);
   const [isScanning, setIsScanning] = useState(false);
@@ -79,11 +80,18 @@ const IngredientManager: React.FC<IngredientManagerProps> = ({ ingredients, setI
 
       if (detectedIngredients.length > 0) {
         const currentIngredientNames = new Set(ingredients.map(i => i.name));
-        const newIngredients = detectedIngredients
+        const normalized = detectedIngredients
+          .map(name => name.trim())
+          .filter(Boolean)
+          .map(name => findIngredientEnglishName(name) || findIngredientEnglishName(name.replace(/\s+/g, ' ')) || name.replace(/\s+/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
+
+        const newIngredients = normalized
           .filter(name => !currentIngredientNames.has(name))
           .map(name => ({ name, quantity: '1' }));
 
-        setIngredients(prev => [...prev, ...newIngredients]);
+        if (newIngredients.length > 0) {
+          setIngredients(prev => [...prev, ...newIngredients]);
+        }
       }
     } catch (error) {
       console.error("Scan failed:", error);
@@ -104,7 +112,7 @@ const IngredientManager: React.FC<IngredientManagerProps> = ({ ingredients, setI
 
   return (
     <div className="flex flex-col h-screen bg-background relative">
-      <MainHeader />
+      <MainHeader onBack={onBack} onLogoClick={onLogoClick} />
 
       <div className="p-4 pb-0">
         <div className="flex gap-2 mb-4 relative z-20">

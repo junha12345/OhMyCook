@@ -20,6 +20,14 @@ interface RecipeRecommendationsProps {
   onStartChat: (recipe: Recipe) => void;
   initialOpenedRecipe?: Recipe | null;
   onRecipeModalChange?: (recipe: Recipe | null) => void;
+  cachedRecipes: Recipe[];
+  onRecipesChange: (recipes: Recipe[] | ((prev: Recipe[]) => Recipe[])) => void;
+  filters: RecipeFilters;
+  onFiltersChange: (filters: RecipeFilters) => void;
+  priorityIngredients: string[];
+  onPriorityIngredientsChange: (names: string[]) => void;
+  onRecipeDetailsLoaded?: (recipe: Recipe) => void;
+  onLogoClick?: () => void;
 }
 
 const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({
@@ -31,25 +39,43 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({
   onToggleSaveRecipe,
   onStartChat,
   initialOpenedRecipe,
-  onRecipeModalChange
+  onRecipeModalChange,
+  cachedRecipes,
+  onRecipesChange,
+  filters: controlledFilters,
+  onFiltersChange,
+  priorityIngredients: controlledPriority,
+  onPriorityIngredientsChange,
+  onRecipeDetailsLoaded,
+  onLogoClick
 }) => {
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [recipes, setRecipes] = useState<Recipe[]>(cachedRecipes);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(initialOpenedRecipe || null);
   const { t, language } = useLanguage();
   const [isIngredientModalOpen, setIsIngredientModalOpen] = useState(false);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [filters, setFilters] = useState<RecipeFilters>({
-    cuisine: 'any',
-    servings: 2,
-    spiciness: 'medium',
-    difficulty: 'medium',
-    maxCookTime: 45,
-  });
-  const [priorityIngredients, setPriorityIngredients] = useState<string[]>([]);
+  const [filters, setFilters] = useState<RecipeFilters>(controlledFilters);
+  const [priorityIngredients, setPriorityIngredients] = useState<string[]>(controlledPriority);
   const [progress, setProgress] = useState(0);
   const intervalRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setRecipes(cachedRecipes);
+  }, [cachedRecipes]);
+
+  useEffect(() => {
+    setFilters(controlledFilters);
+  }, [controlledFilters]);
+
+  useEffect(() => {
+    setPriorityIngredients(controlledPriority);
+  }, [controlledPriority]);
+
+  useEffect(() => {
+    setSelectedRecipe(initialOpenedRecipe || null);
+  }, [initialOpenedRecipe]);
 
   useEffect(() => {
     if (isLoading) {
@@ -83,11 +109,13 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({
 
 
   const togglePriorityIngredient = (name: string) => {
-    setPriorityIngredients(prev =>
-      prev.includes(name)
+    setPriorityIngredients(prev => {
+      const next = prev.includes(name)
         ? prev.filter(i => i !== name)
-        : [...prev, name]
-    );
+        : [...prev, name];
+      onPriorityIngredientsChange(next);
+      return next;
+    });
   };
 
   const handleFetchRecipes = async () => {
@@ -98,11 +126,13 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({
     setIsLoading(true);
     setError(null);
     setRecipes([]);
+    onRecipesChange([]);
     try {
       const { getRecipeRecommendations } = await import('../services/geminiService');
       const ingredientNames = ingredients.map(ing => ing.name);
       const result = await getRecipeRecommendations(ingredientNames, priorityIngredients, filters, language);
       setRecipes(result);
+      onRecipesChange(result);
       if (result.length === 0) {
         setError(t('noRecipesFound'));
       }
@@ -132,9 +162,9 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({
 
         // Update the selected recipe with details
         setSelectedRecipe(updatedRecipe);
-
-        // Also update the recipe in the main list so we don't fetch again
         setRecipes(prev => prev.map(r => r.recipeName === recipe.recipeName ? updatedRecipe : r));
+        onRecipesChange(prev => prev.map(r => r.recipeName === recipe.recipeName ? updatedRecipe : r));
+        onRecipeDetailsLoaded?.(updatedRecipe);
       } catch (error) {
         console.error("Failed to fetch recipe details", error);
         // Optionally handle error in modal (e.g. show "Failed to load details")
@@ -151,6 +181,7 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({
 
   const handleResetFilters = () => {
     setFilters(defaultFilters);
+    onFiltersChange(defaultFilters);
   };
 
   const cuisineOptions: RecipeFilters['cuisine'][] = ['any', 'korean', 'japanese', 'chinese', 'western'];
@@ -159,7 +190,7 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      <MainHeader onBack={onBack} />
+      <MainHeader onBack={onBack} onLogoClick={onLogoClick} />
 
       <div className="flex-grow p-4 overflow-y-auto">
 
@@ -226,6 +257,7 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({
             initialFilters={filters}
             onApply={(newFilters) => {
               setFilters(newFilters);
+              onFiltersChange(newFilters);
               setIsFilterModalOpen(false);
             }}
             onClose={() => setIsFilterModalOpen(false)}
@@ -257,7 +289,7 @@ const RecipeRecommendations: React.FC<RecipeRecommendationsProps> = ({
 
         {error && <p className="text-red-500 text-center py-4 mt-4">{error}</p>}
 
-        {!isLoading && progress === 100 && (
+        {!isLoading && recipes.length > 0 && (
           <div className="space-y-4 pb-20">
             {recipes.map((recipe, index) => (
               <RecipeCard key={index} recipe={recipe} onSelect={() => handleRecipeSelect(recipe)} />

@@ -2,6 +2,8 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const authUrl = supabaseUrl && supabaseAnonKey ? `${supabaseUrl}/auth/v1` : null;
 
+export const isSupabaseConfigured = Boolean(authUrl && supabaseAnonKey);
+
 const ensureConfigured = () => {
   if (!authUrl || !supabaseAnonKey) {
     console.warn(

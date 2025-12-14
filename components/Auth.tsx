@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { User } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 import { LogoIcon } from './icons';
-import { startGoogleSignIn } from '../services/supabaseAuth';
+import { isSupabaseConfigured, startGoogleSignIn } from '../services/supabaseAuth';
 
 interface AuthProps {
   users: User[];
@@ -91,7 +91,8 @@ const Auth: React.FC<AuthProps> = ({ users, onLogin, onSignup, onBack, initialMo
             <button
               type="button"
               onClick={() => startGoogleSignIn()}
-              className="w-full bg-white border border-line-light text-text-primary font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2"
+              disabled={!isSupabaseConfigured}
+              className={`w-full bg-white border border-line-light text-text-primary font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 ${!isSupabaseConfigured ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <svg
                 aria-hidden
@@ -106,7 +107,9 @@ const Auth: React.FC<AuthProps> = ({ users, onLogin, onSignup, onBack, initialMo
               </svg>
               {t('continueWithGoogle')}
             </button>
-            <p className="text-xs text-text-secondary text-center mt-2">{t('googleAuthNote')}</p>
+            <p className="text-xs text-text-secondary text-center mt-2">
+              {isSupabaseConfigured ? t('googleAuthNote') : t('googleAuthNote') + ' (Unavailable)'}
+            </p>
           </div>
         </form>
 

@@ -16,7 +16,7 @@ import LandingPage from './components/LandingPage';
 import BottomNavigation from './components/BottomNavigation';
 import Profile from './components/Profile';
 import PageTransition from './components/PageTransition';
-import { AuthSession, consumeSessionFromHash, ensureValidSession, signOut } from './services/supabaseAuth';
+import { AuthSession, consumeSessionFromHash, ensureValidSession, signOut, isSupabaseConfigured } from './services/supabaseAuth';
 
 const defaultSettings: UserSettings = {
   cookingLevel: 'Beginner',
@@ -72,6 +72,8 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     const syncSupabaseSession = async () => {
+      if (!isSupabaseConfigured) return;
+
       const sessionFromHash = await consumeSessionFromHash();
       if (sessionFromHash) {
         setAuthSession(sessionFromHash);

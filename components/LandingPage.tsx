@@ -1,15 +1,6 @@
 import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
-// Assuming the image is in the root and configured to be imported. 
-// If it's a static asset, we might reference it by string path if Vite is configured to serve root.
-// However, referencing it as an import is safer in Vite for assets.
-// Since the file is in the root where App.tsx is, we can try to import it.
-// Note: Typescript might complain if .png module definition is missing.
-// I will assume standard Vite setup where imports work or url reference works.
-// Given strict TS, I'll use a relative path string which Vite usually resolves if in public, 
-// but here it is in root. 
-// Let's try importing.
-// import landingHero from '../landing_hero.png'; 
+import landingHero from '../landing_hero.png';
 
 import { LogoIcon } from './icons';
 
@@ -25,9 +16,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin }) => {
     <div className="h-[100dvh] bg-background flex flex-col items-center justify-between p-6 overflow-y-auto">
       <div className="w-full flex-grow flex flex-col items-center justify-center space-y-8">
         <div className="w-full max-w-sm aspect-square rounded-full overflow-hidden shadow-xl border-4 border-surface relative">
-          {/* Using the image we added */}
           <img
-            src="/landing_hero.png"
+            src={landingHero}
             alt="Delicious Food"
             className="w-full h-full object-cover"
             onError={(e) => {

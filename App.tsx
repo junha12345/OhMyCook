@@ -155,25 +155,10 @@ const AppContent: React.FC = () => {
     }
 
     // 2. Collect Author IDs & Post IDs
-    const authorIds = [...new Set(postsData.map((p: any) => p.author_id))];
+    const authorIds = new Set<string>(postsData.map((p: any) => p.author_id));
     const postIds = postsData.map((p: any) => p.id);
 
-    // 3. Fetch Profiles
-    let profilesMap: Record<string, any> = {};
-    if (authorIds.length > 0) {
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('id, nickname, profile_image')
-        .in('id', authorIds);
-
-      if (profilesData) {
-        profilesData.forEach((p: any) => {
-          profilesMap[p.id] = p;
-        });
-      }
-    }
-
-    // 4. Fetch Comments
+    // 3. Fetch Comments (collect additional author IDs)
     let commentsMap: Record<string, any[]> = {};
     if (postIds.length > 0) {
       const { data: commentsData } = await supabase
@@ -186,6 +171,23 @@ const AppContent: React.FC = () => {
         commentsData.forEach((c: any) => {
           if (!commentsMap[c.post_id]) commentsMap[c.post_id] = [];
           commentsMap[c.post_id].push(c);
+          if (c.author_id) authorIds.add(c.author_id);
+        });
+      }
+    }
+
+    // 4. Fetch Profiles (for both post and comment authors)
+    let profilesMap: Record<string, any> = {};
+    const authorIdList = Array.from(authorIds);
+    if (authorIdList.length > 0) {
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, nickname, profile_image')
+        .in('id', authorIdList);
+
+      if (profilesData) {
+        profilesData.forEach((p: any) => {
+          profilesMap[p.id] = p;
         });
       }
     }
@@ -208,7 +210,8 @@ const AppContent: React.FC = () => {
           content: c.content,
           createdAt: c.created_at,
           authorEmail: '',
-          authorName: 'User',
+          authorName: profilesMap[c.author_id]?.nickname || 'User',
+          authorProfileImage: profilesMap[c.author_id]?.profile_image,
         }))
       };
     });

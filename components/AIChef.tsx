@@ -175,7 +175,11 @@ const AIChef: React.FC<AIChefProps> = ({
     : t('aiChefTitle');
 
   return (
-    <div className={`flex flex-col h-screen bg-background ${!showBack ? 'pb-24' : ''}`}>
+    <div
+      className={`flex flex-col min-h-[100dvh] bg-background ${
+        !showBack ? 'pb-[calc(6rem+env(safe-area-inset-bottom))]' : 'pb-[env(safe-area-inset-bottom)]'
+      }`}
+    >
       <div className="flex items-center justify-between px-4 py-3 border-b bg-surface gap-2 pt-[calc(0.75rem+env(safe-area-inset-top))]">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {showBack && (
@@ -193,7 +197,7 @@ const AIChef: React.FC<AIChefProps> = ({
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         <div className="p-4 space-y-4">
           {/* History List View */}
           {showHistory && (

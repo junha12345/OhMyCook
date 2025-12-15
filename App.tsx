@@ -1,22 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { UserSettings, Ingredient, ShoppingListItem, Recipe, User, ChatMessage, CommunityPost, RecipeFilters, CommunityComment } from './types';
 import IngredientManager from './components/IngredientManager';
-import RecipeRecommendations from './components/RecipeRecommendations';
-import AIChef from './components/AIChef';
-import Community from './components/Community';
-import Onboarding from './components/Onboarding';
-import ShoppingList from './components/ShoppingList';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import Spinner from './components/Spinner';
-import SavedRecipes from './components/SavedRecipes';
-import Auth from './components/Auth';
-import LandingPage from './components/LandingPage';
 import BottomNavigation from './components/BottomNavigation';
-import Profile from './components/Profile';
 import PageTransition from './components/PageTransition';
 import { supabase } from './services/supabaseClient';
+
+const AIChef = React.lazy(() => import('./components/AIChef'));
+const Community = React.lazy(() => import('./components/Community'));
+const RecipeRecommendations = React.lazy(() => import('./components/RecipeRecommendations'));
+const Onboarding = React.lazy(() => import('./components/Onboarding'));
+const ShoppingList = React.lazy(() => import('./components/ShoppingList'));
+const SavedRecipes = React.lazy(() => import('./components/SavedRecipes'));
+const Auth = React.lazy(() => import('./components/Auth'));
+const LandingPage = React.lazy(() => import('./components/LandingPage'));
+const Profile = React.lazy(() => import('./components/Profile'));
 
 const defaultSettings: UserSettings = {
   cookingLevel: 'Beginner',
@@ -32,6 +33,18 @@ const defaultSettings: UserSettings = {
 
 type Tab = 'cook' | 'chat' | 'community' | 'profile';
 type View = 'tab' | 'onboarding' | 'recommendations' | 'chat' | 'shoppingList' | 'savedRecipes' | 'auth';
+
+const FullscreenLoader: React.FC = () => (
+  <div className="flex justify-center items-center h-screen w-full">
+    <Spinner />
+  </div>
+);
+
+const PanelLoader: React.FC = () => (
+  <div className="flex items-center justify-center w-full h-full py-10">
+    <Spinner />
+  </div>
+);
 
 // Main App Content Component
 const AppContent: React.FC = () => {
@@ -61,6 +74,24 @@ const AppContent: React.FC = () => {
   const [cachedPriorityIngredients, setCachedPriorityIngredients] = useLocalStorage<string[]>(`ohmycook-priority-${userStorageSuffix}`, []);
 
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  const scheduleViewPreload = () => {
+    const idleCallback = (window as any).requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 200));
+    const cancelIdleCallback = (window as any).cancelIdleCallback ?? clearTimeout;
+
+    const handle = idleCallback(() => {
+      import('./components/AIChef');
+      import('./components/Community');
+      import('./components/Profile');
+      import('./components/Auth');
+      import('./components/Onboarding');
+      import('./components/RecipeRecommendations');
+      import('./components/ShoppingList');
+      import('./components/SavedRecipes');
+    });
+
+    return () => cancelIdleCallback(handle);
+  };
 
   // Navigation State
   const [currentView, setCurrentView] = useState<View>('tab');
@@ -275,6 +306,12 @@ const AppContent: React.FC = () => {
     document.documentElement.lang = language;
     document.title = t('appTitle');
   }, [language, t]);
+
+  useEffect(() => {
+    if (!isInitialLoad) {
+      return scheduleViewPreload();
+    }
+  }, [isInitialLoad]);
 
   const handleNavigate = (view: View, isBack: boolean = false) => {
     setPreviousView(currentView);
@@ -547,54 +584,59 @@ const AppContent: React.FC = () => {
         );
       case 'chat':
         return (
-          <AIChef
-            settings={settings}
-            onBack={() => { }} // Tab view, no back action
-            showBack={false}
-            recipeContext={null} // General chat
-            initialMessages={chatHistories['__general__'] || []}
-            onMessagesUpdate={(messages) => handleChatMessagesUpdate('__general__', messages)}
-            allChatHistories={chatHistories}
-            onLoadHistory={(key) => {
-              const isRecipe = key !== '__general__';
-              if (isRecipe) {
-                const recipe = cachedRecipes.find(r => r.recipeName === key) || savedRecipes.find(r => r.recipeName === key);
-                if (recipe) {
-                  setChatContext(recipe);
-                  setCurrentChatKey(key);
-                  handleNavigate('chat');
+          <Suspense fallback={<PanelLoader />}>
+            <AIChef
+              settings={settings}
+              onBack={() => { }} // Tab view, no back action
+              showBack={false}
+              recipeContext={null} // General chat
+              initialMessages={chatHistories['__general__'] || []}
+              onMessagesUpdate={(messages) => handleChatMessagesUpdate('__general__', messages)}
+              allChatHistories={chatHistories}
+              onLoadHistory={(key) => {
+                const isRecipe = key !== '__general__';
+                if (isRecipe) {
+                  const recipe = cachedRecipes.find(r => r.recipeName === key) || savedRecipes.find(r => r.recipeName === key);
+                  if (recipe) {
+                    setChatContext(recipe);
+                    setCurrentChatKey(key);
+                    handleNavigate('chat');
+                  }
+                } else {
+                  setChatContext(null);
+                  setCurrentChatKey('__general__');
                 }
-              } else {
-                setChatContext(null);
-                setCurrentChatKey('__general__');
-              }
-            }}
-          />
+              }}
+            />
+          </Suspense>
         );
       case 'community':
         return (
-
-          <Community
-            currentUser={currentUser}
-            currentUserProfileImage={settings.profileImage}
-            savedRecipes={savedRecipes}
-            posts={communityPosts}
-            onCreatePost={handleCreateCommunityPost}
-            onToggleLike={handleToggleCommunityLike}
-            onAddComment={handleAddCommunityComment}
-            onDeletePost={handleDeleteCommunityPost}
-          />
+          <Suspense fallback={<PanelLoader />}>
+            <Community
+              currentUser={currentUser}
+              currentUserProfileImage={settings.profileImage}
+              savedRecipes={savedRecipes}
+              posts={communityPosts}
+              onCreatePost={handleCreateCommunityPost}
+              onToggleLike={handleToggleCommunityLike}
+              onAddComment={handleAddCommunityComment}
+              onDeletePost={handleDeleteCommunityPost}
+            />
+          </Suspense>
         );
       case 'profile':
         return (
-          <Profile
-            user={currentUser}
-            settings={settings}
-            onLogout={handleLogout}
-            onNavigate={handleNavigate}
-            onUpdateSettings={handleSaveSettings}
-            onLogoClick={() => { setCurrentView('tab'); setCurrentTab('cook'); }}
-          />
+          <Suspense fallback={<PanelLoader />}>
+            <Profile
+              user={currentUser}
+              settings={settings}
+              onLogout={handleLogout}
+              onNavigate={handleNavigate}
+              onUpdateSettings={handleSaveSettings}
+              onLogoClick={() => { setCurrentView('tab'); setCurrentTab('cook'); }}
+            />
+          </Suspense>
         );
       default:
         return null;
@@ -602,15 +644,17 @@ const AppContent: React.FC = () => {
   };
 
   const renderView = () => {
-    if (isInitialLoad) return <div className="flex justify-center items-center h-screen"><Spinner /></div>;
+    if (isInitialLoad) return <FullscreenLoader />;
 
     // Global Auth Check for main flows if needed, but LandingPage handles guests.
     if (!currentUser && currentView !== 'auth' && currentView !== 'onboarding') {
       return (
-        <LandingPage
-          onGetStarted={() => { setNavigationDirection('fade'); setAuthMode('signup'); setCurrentView('auth'); }}
-          onLogin={() => { setNavigationDirection('fade'); setAuthMode('login'); setCurrentView('auth'); }}
-        />
+        <Suspense fallback={<FullscreenLoader />}>
+          <LandingPage
+            onGetStarted={() => { setNavigationDirection('fade'); setAuthMode('signup'); setCurrentView('auth'); }}
+            onLogin={() => { setNavigationDirection('fade'); setAuthMode('login'); setCurrentView('auth'); }}
+          />
+        </Suspense>
       );
     }
 
@@ -621,91 +665,103 @@ const AppContent: React.FC = () => {
             case 'auth':
               return (
                 <PageTransition key="auth" direction={navigationDirection}>
-                  <Auth onBack={() => { setNavigationDirection('right'); setCurrentView('tab'); setCurrentTab('cook'); }} initialMode={authMode} />
+                  <Suspense fallback={<FullscreenLoader />}>
+                    <Auth onBack={() => { setNavigationDirection('right'); setCurrentView('tab'); setCurrentTab('cook'); }} initialMode={authMode} />
+                  </Suspense>
                 </PageTransition>
               );
             case 'onboarding':
               return (
                 <PageTransition key="onboarding" direction={navigationDirection}>
-                  <Onboarding initialSettings={settings} onSave={handleSaveSettings} onBack={() => { setNavigationDirection('right'); setCurrentView(currentUser ? 'tab' : 'auth'); }} />
+                  <Suspense fallback={<FullscreenLoader />}>
+                    <Onboarding initialSettings={settings} onSave={handleSaveSettings} onBack={() => { setNavigationDirection('right'); setCurrentView(currentUser ? 'tab' : 'auth'); }} />
+                  </Suspense>
                 </PageTransition>
               );
 
             case 'recommendations':
               return (
                 <PageTransition key="recommendations" direction={navigationDirection}>
-                  <RecipeRecommendations
-                    ingredients={ingredients}
-                    onBack={() => { setNavigationDirection('right'); setCurrentView('tab'); setCurrentTab('cook'); setOpenedRecipeModal(null); }}
-                    shoppingList={shoppingList}
-                    onToggleShoppingListItem={handleToggleShoppingListItem}
-                    savedRecipes={savedRecipes}
-                    onToggleSaveRecipe={handleToggleSaveRecipe}
-                    onStartChat={handleStartChat}
-                    initialOpenedRecipe={openedRecipeModal}
-                    onRecipeModalChange={setOpenedRecipeModal}
-                    cachedRecipes={cachedRecipes}
-                    onRecipesChange={setCachedRecipes}
-                    filters={cachedRecipeFilters}
-                    onFiltersChange={setCachedRecipeFilters}
-                    priorityIngredients={cachedPriorityIngredients}
-                    onPriorityIngredientsChange={setCachedPriorityIngredients}
-                    onRecipeDetailsLoaded={handleRecipeDetailsLoaded}
-                    onLogoClick={() => { setCurrentView('tab'); setCurrentTab('cook'); }}
-                  />
+                  <Suspense fallback={<FullscreenLoader />}>
+                    <RecipeRecommendations
+                      ingredients={ingredients}
+                      onBack={() => { setNavigationDirection('right'); setCurrentView('tab'); setCurrentTab('cook'); setOpenedRecipeModal(null); }}
+                      shoppingList={shoppingList}
+                      onToggleShoppingListItem={handleToggleShoppingListItem}
+                      savedRecipes={savedRecipes}
+                      onToggleSaveRecipe={handleToggleSaveRecipe}
+                      onStartChat={handleStartChat}
+                      initialOpenedRecipe={openedRecipeModal}
+                      onRecipeModalChange={setOpenedRecipeModal}
+                      cachedRecipes={cachedRecipes}
+                      onRecipesChange={setCachedRecipes}
+                      filters={cachedRecipeFilters}
+                      onFiltersChange={setCachedRecipeFilters}
+                      priorityIngredients={cachedPriorityIngredients}
+                      onPriorityIngredientsChange={setCachedPriorityIngredients}
+                      onRecipeDetailsLoaded={handleRecipeDetailsLoaded}
+                      onLogoClick={() => { setCurrentView('tab'); setCurrentTab('cook'); }}
+                    />
+                  </Suspense>
                 </PageTransition>
               );
 
             case 'chat':
               return (
                 <PageTransition key="chat" direction={navigationDirection}>
-                  <AIChef
-                    settings={settings}
-                    onBack={handleChatBack}
-                    recipeContext={chatContext}
-                    initialMessages={chatHistories[currentChatKey] || []}
-                    onMessagesUpdate={(messages) => handleChatMessagesUpdate(currentChatKey, messages)}
-                    openedFromRecipe={chatOpenedFromRecipe}
-                    onCloseRecipeContext={() => setChatOpenedFromRecipe(null)}
-                    allChatHistories={chatHistories}
-                    onLoadHistory={(key) => {
-                      const isRecipe = key !== '__general__';
-                      if (isRecipe) {
-                        // Find recipe in cached or saved recipes
-                        const recipe = cachedRecipes.find(r => r.recipeName === key) || savedRecipes.find(r => r.recipeName === key);
-                        if (recipe) {
-                          setChatContext(recipe);
+                  <Suspense fallback={<FullscreenLoader />}>
+                    <AIChef
+                      settings={settings}
+                      onBack={handleChatBack}
+                      recipeContext={chatContext}
+                      initialMessages={chatHistories[currentChatKey] || []}
+                      onMessagesUpdate={(messages) => handleChatMessagesUpdate(currentChatKey, messages)}
+                      openedFromRecipe={chatOpenedFromRecipe}
+                      onCloseRecipeContext={() => setChatOpenedFromRecipe(null)}
+                      allChatHistories={chatHistories}
+                      onLoadHistory={(key) => {
+                        const isRecipe = key !== '__general__';
+                        if (isRecipe) {
+                          // Find recipe in cached or saved recipes
+                          const recipe = cachedRecipes.find(r => r.recipeName === key) || savedRecipes.find(r => r.recipeName === key);
+                          if (recipe) {
+                            setChatContext(recipe);
+                            setCurrentChatKey(key);
+                            setChatOpenedFromRecipe(null);
+                          }
+                        } else {
+                          setChatContext(null);
                           setCurrentChatKey(key);
                           setChatOpenedFromRecipe(null);
                         }
-                      } else {
-                        setChatContext(null);
-                        setCurrentChatKey(key);
-                        setChatOpenedFromRecipe(null);
-                      }
-                    }}
-                  />
+                      }}
+                    />
+                  </Suspense>
                 </PageTransition>
               );
 
             case 'shoppingList':
               return (
                 <PageTransition key="shoppingList" direction={navigationDirection}>
-                  <ShoppingList shoppingList={shoppingList} setShoppingList={setShoppingList} onBack={() => { setNavigationDirection('right'); setCurrentView('tab'); setCurrentTab('profile'); }} />
+                  <Suspense fallback={<FullscreenLoader />}>
+                    <ShoppingList shoppingList={shoppingList} setShoppingList={setShoppingList} onBack={() => { setNavigationDirection('right'); setCurrentView('tab'); setCurrentTab('profile'); }} />
+                  </Suspense>
                 </PageTransition>
               );
 
             case 'savedRecipes':
               return (
                 <PageTransition key="savedRecipes" direction={navigationDirection}>
-                  <SavedRecipes
-                    savedRecipes={savedRecipes}
-                    onBack={() => { setNavigationDirection('right'); setCurrentView('tab'); setCurrentTab('profile'); }}
-                    shoppingList={shoppingList}
-                    onToggleShoppingListItem={handleToggleShoppingListItem}
-                    onToggleSaveRecipe={handleToggleSaveRecipe}
-                    onStartChat={handleStartChat}
-                  />
+                  <Suspense fallback={<FullscreenLoader />}>
+                    <SavedRecipes
+                      savedRecipes={savedRecipes}
+                      onBack={() => { setNavigationDirection('right'); setCurrentView('tab'); setCurrentTab('profile'); }}
+                      shoppingList={shoppingList}
+                      onToggleShoppingListItem={handleToggleShoppingListItem}
+                      onToggleSaveRecipe={handleToggleSaveRecipe}
+                      onStartChat={handleStartChat}
+                    />
+                  </Suspense>
                 </PageTransition>
               );
 

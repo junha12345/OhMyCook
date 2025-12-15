@@ -179,7 +179,10 @@ const IngredientManager: React.FC<IngredientManagerProps> = ({ ingredients, setI
 
       <div className="flex-grow p-4 pt-0 overflow-y-auto pb-40">
         {filteredIngredients.length === 0 ? (
-          <p className="text-center text-text-secondary mt-10">{searchTerm ? t('noSearchResults') : t('pleaseAddIngredients')}</p>
+          <div className="text-center text-text-secondary mt-10">
+            <span className="text-6xl block mb-3 grayscale opacity-50">🥗</span>
+            <p className="text-base font-medium">{searchTerm ? t('noSearchResults') : t('pleaseAddIngredients')}</p>
+          </div>
         ) : (
           <div className="space-y-6">
             {INGREDIENT_CATEGORIES.map(category => {

@@ -11,7 +11,7 @@ interface ProfileProps {
     settings: UserSettings;
     onLogout: () => void;
     onNavigate: (view: any) => void;
-    onUpdateSettings: (settings: UserSettings) => void;
+    onUpdateSettings: (settings: UserSettings, initialIngredients?: string[], options?: { stayOnCurrentTab?: boolean }) => void;
     onLogoClick?: () => void;
 }
 
@@ -30,14 +30,14 @@ const Profile: React.FC<ProfileProps> = ({ user, settings, onLogout, onNavigate,
         const reader = new FileReader();
         reader.onload = () => {
             const result = reader.result as string;
-            onUpdateSettings({ ...settings, profileImage: result });
+            onUpdateSettings({ ...settings, profileImage: result }, [], { stayOnCurrentTab: true });
         };
         reader.readAsDataURL(file);
     };
 
     const handleSaveNickname = () => {
         if (editNicknameValue.trim()) {
-            onUpdateSettings({ ...settings, nickname: editNicknameValue.trim() });
+            onUpdateSettings({ ...settings, nickname: editNicknameValue.trim() }, [], { stayOnCurrentTab: true });
         }
         setIsEditingNickname(false);
     };
@@ -48,7 +48,7 @@ const Profile: React.FC<ProfileProps> = ({ user, settings, onLogout, onNavigate,
                 <Onboarding
                     initialSettings={settings}
                     onSave={(newSettings) => {
-                        onUpdateSettings(newSettings);
+                        onUpdateSettings(newSettings, [], { stayOnCurrentTab: true });
                         setShowSettings(false);
                     }}
                     onBack={() => setShowSettings(false)}

@@ -308,7 +308,11 @@ const AppContent: React.FC = () => {
     setChatOpenedFromRecipe(null);
   };
 
-  const handleSaveSettings = async (newSettings: UserSettings, initialIngredients: string[] = []) => {
+  const handleSaveSettings = async (
+    newSettings: UserSettings,
+    initialIngredients: string[] = [],
+    options?: { stayOnCurrentTab?: boolean }
+  ) => {
     // Optimistic update
     setSettings(newSettings);
 
@@ -348,9 +352,11 @@ const AppContent: React.FC = () => {
       // TODO: Sync ingredients to Supabase table 'user_ingredients' (Later phase)
     }
 
-    // Always navigate home
-    setCurrentView('tab');
-    setCurrentTab('cook');
+    // Navigate only when requested (e.g., onboarding). Stay on the current tab for profile edits.
+    if (!options?.stayOnCurrentTab) {
+      setCurrentView('tab');
+      setCurrentTab('cook');
+    }
   };
 
   const handleToggleShoppingListItem = (itemName: string) => {

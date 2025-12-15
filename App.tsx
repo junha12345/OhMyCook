@@ -114,7 +114,6 @@ const AppContent: React.FC = () => {
           // If this is initial load:
           if (isInitialLoad) {
             setCurrentView('tab');
-            setCurrentTab('cook');
           }
         } else {
           setCurrentView('onboarding');

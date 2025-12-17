@@ -711,8 +711,10 @@ const AppContent: React.FC = () => {
             case 'tab':
             default:
               return (
-                <div key="tab" className="h-full">
-                  {renderTab()}
+                <div key="tab" className="h-full flex flex-col overflow-hidden">
+                  <div className="flex-1 overflow-hidden">
+                    {renderTab()}
+                  </div>
                   <BottomNavigation currentTab={currentTab} onTabChange={handleTabChange} />
                 </div>
               );

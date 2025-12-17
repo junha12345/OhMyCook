@@ -176,7 +176,7 @@ const AIChef: React.FC<AIChefProps> = ({
 
   return (
     <div
-      className={`flex flex-col min-h-[100dvh] bg-background ${
+      className={`flex flex-col h-full min-h-[100dvh] bg-background overflow-hidden ${
         !showBack ? 'pb-[calc(6rem+env(safe-area-inset-bottom))]' : 'pb-[env(safe-area-inset-bottom)]'
       }`}
     >
